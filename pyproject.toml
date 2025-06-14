@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "padrelay"
-version = "1.0.0"
+version = "1.0.1"
 description = "A client-server application for transmitting gamepad input over a network"
 readme = "README.md"
 authors = [{ name = "ssh-den", email = "sshden@duck.com" }]
