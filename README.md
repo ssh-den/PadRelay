@@ -14,28 +14,45 @@
 
 ## Installation
 
-Clone the repository and install the Python requirements if you want to run the
-scripts directly from source:
+You can install PadRelay directly from [PyPI](https://pypi.org/project/padrelay/):
 
 ```bash
+pip install padrelay
+```
+
+This will install the padrelay-server and padrelay-client command-line tools globally in your PATH.
+
+To run the server and client:
+
+```bash
+padrelay-server --config config/server_config.ini
+padrelay-client --config config/client_config.ini
+```
+
+From Source (Development Mode)
+
+If you want to run the project directly from source (e.g. for development), clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/yourusername/padrelay.git
+cd padrelay
 pip install -r requirements.txt
 ```
 
-After installing the dependencies, you can run the applications directly from source with: `python scripts/server.py` and
-`python scripts/client.py`.
+Then either run the scripts directly:
 
-Alternatively install the package in editable mode to make the console commands
-available:
+```bash
+python scripts/server.py --config config/server_config.ini
+python scripts/client.py --config config/client_config.ini
+```
+
+Or install in editable mode to expose the CLI tools:
 
 ```bash
 pip install -e .
 ```
 
-This will expose `padrelay-server` and `padrelay-client` on your `PATH`. When the
-project will be published on PyPI you may also install it with `pip install
-padrelay`.
-
-When running the server on Windows install `vgamepad` and
+When running the server on Windows install [vgamepad](https://pypi.org/project/vgamepad/) and
 [ViGEmBus](https://github.com/ViGEm/ViGEmBus) as well.
 
 ## Configuration
