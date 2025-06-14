@@ -29,7 +29,7 @@ padrelay-server --config config/server_config.ini
 padrelay-client --config config/client_config.ini
 ```
 
-From Source (Development Mode)
+#### From Source (Development Mode)
 
 If you want to run the project directly from source (e.g. for development), clone the repository and install dependencies:
 
