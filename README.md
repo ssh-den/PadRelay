@@ -121,6 +121,7 @@ To run the unit tests:
 
 ```bash
 pytest
+```
 
 ## Logging
 
