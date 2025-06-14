@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
-## [Unreleased]
+## [1.0.1] - 2025-06-14
 
 ### Added
-- CI: GitHub Actions workflow for testing with pytest
+- CI: GitHub Actions workflow for testing with pytest (`python-tests.yml`)
+- CI: GitHub Actions workflow for building and publishing releases on tag push (`release.yml`)
 
 ## [1.0.0] - 2025-06-14
 
@@ -19,4 +20,5 @@ and this project adheres to [Semantic Versioning].
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 <!-- Versions -->
+[1.0.1]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.1
 [1.0.0]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.0
