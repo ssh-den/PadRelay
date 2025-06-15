@@ -20,14 +20,17 @@ You can install PadRelay directly from [PyPI](https://pypi.org/project/padrelay/
 pip install padrelay
 ```
 
-This will install the padrelay-server and padrelay-client command-line tools globally in your PATH.
+This will install the padrelay-server and padrelay-client command-line tools globally in your PATH. It also provides a `padrelay-keymapper` utility for creating controller mappings.
 
 To run the server and client:
 
 ```bash
 padrelay-server --config config/server_config.ini
 padrelay-client --config config/client_config.ini
+padrelay-keymapper --output my_config.ini
 ```
+
+PadRelay includes a `padrelay-keymapper` utility for creating custom controller-to-virtual-pad mappings. See the [key mapper documentation](KEY_MAPPER.md) for details on using this tool.
 
 #### From Source (Development Mode)
 

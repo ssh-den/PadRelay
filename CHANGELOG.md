@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [1.0.4] - 2025-06-15
+
+### Added
+- `padrelay-keymapper` CLI for creating controller mapping files
+
 ## [1.0.3] - 2025-06-14
 
 ### Fixed
@@ -31,6 +36,7 @@ and this project adheres to [Semantic Versioning].
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 <!-- Versions -->
+[1.0.4]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.4
 [1.0.3]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.3
 [1.0.2]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.2
 [1.0.1]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.1

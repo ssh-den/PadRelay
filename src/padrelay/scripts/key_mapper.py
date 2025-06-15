@@ -437,15 +437,7 @@ class ControllerMapper:
                         elif axis_name == 'right_stick_y':
                             self.axis_mapping['invert_right_y'] = inversion_needed if apply_recommendation else not inversion_needed
                             print(f"Right Y-axis inversion set to: {self.axis_mapping['invert_right_y']}")
-                    
-                    # For triggers, detect if scaling is needed
-                    if "trigger" in axis_name:
-                        # Some controllers use -1 to 1 range for triggers instead of 0 to 1
-                        if (initial_value := self.joystick.get_axis(axis_idx)) < -0.5:
-                            print(f"\nYour {axis_name} seems to use a -1 to 1 range.")
-                            print("This will be automatically handled in the configuration.")
-                            self.axis_mapping[f"{axis_name}_needs_scaling"] = True
-                    
+
                     # Successfully mapped
                     break
                 else:
@@ -453,7 +445,7 @@ class ControllerMapper:
                     if input().lower() == 'n':
                         print(f"Skipping {axis_desc}")
                         break
-            
+
             # Check if we've been interrupted
             if self.interrupt_flag:
                 return
@@ -635,8 +627,11 @@ class ControllerMapper:
         
         # Axis mapping section
         config.add_section('axis_mapping')
-        axis_mapping_filtered = {k: v for k, v in self.axis_mapping.items() 
-                                if k not in ['invert_left_y', 'invert_right_y']}
+        axis_mapping_filtered = {
+            k: v
+            for k, v in self.axis_mapping.items()
+            if k not in ["invert_left_y", "invert_right_y"]
+        }
         for axis_name, idx in axis_mapping_filtered.items():
             config.set('axis_mapping', axis_name, str(idx))
         

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "padrelay"
-version = "1.0.3"
+version = "1.0.4"
 description = "A client-server application for transmitting gamepad input over a network"
 readme = "README.md"
 authors = [{ name = "ssh-den", email = "sshden@duck.com" }]
@@ -31,6 +31,7 @@ server = ["vgamepad"]
 [project.scripts]
 padrelay-client = "padrelay.scripts.client:main"
 padrelay-server = "padrelay.scripts.server:main"
+padrelay-keymapper = "padrelay.scripts.key_mapper:main"
 
 [project.urls]
 Homepage = "https://github.com/ssh-den/PadRelay"
