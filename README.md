@@ -4,7 +4,7 @@
 
 ## Features
 
-- Works with Python 3.6+ on any system with `pygame` for the client
+- Works with Python 3.6+ on any system (Linux, MacOS, Windows) with `pygame` for the client
 - Windows server with [ViGEmBus](https://github.com/ViGEm/ViGEmBus) installs a virtual gamepad
 - Supports TCP (reliable) or UDP (low latency) transport
 - Challenge/response authentication for TCP and token authentication for UDP
