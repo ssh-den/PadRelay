@@ -4,6 +4,7 @@ import configparser
 import getpass
 import os
 from ..security.auth import Authenticator
+from ..security.password_strength import warn_weak_password
 from typing import Optional, Tuple
 from .logging_utils import get_logger
 from ..server.constants import (
@@ -19,6 +20,27 @@ def load_config(config_path: str) -> Optional[configparser.ConfigParser]:
 
     config = configparser.ConfigParser()
     try:
+        # Check file permissions (warn if world-readable)
+        import stat
+        from pathlib import Path
+        config_file = Path(config_path)
+        if config_file.exists():
+            file_stat = config_file.stat()
+            mode = file_stat.st_mode
+            # Check if file is world-readable (others can read)
+            if mode & stat.S_IROTH:
+                logger.warning(
+                    f"Configuration file {config_path} is world-readable! "
+                    "This is a security risk if the file contains passwords. "
+                    f"Consider setting permissions to 600: chmod 600 {config_path}"
+                )
+            # Check if file is group-readable
+            elif mode & stat.S_IRGRP:
+                logger.warning(
+                    f"Configuration file {config_path} is group-readable. "
+                    f"Consider setting permissions to 600 for better security: chmod 600 {config_path}"
+                )
+
         with open(config_path, 'r') as f:
             config.read_file(f)
         logger.info(f"Configuration loaded from {config_path}")
@@ -41,6 +63,16 @@ def parse_client_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
         "--password-hash",
         type=str,
         help="Pre-hashed authentication password (overrides --password)",
+    )
+    parser.add_argument(
+        "--enable-tls",
+        action="store_true",
+        help="Enable TLS/SSL encryption (recommended for security)",
+    )
+    parser.add_argument(
+        "--disable-tls",
+        action="store_true",
+        help="Disable TLS/SSL encryption (use only on trusted networks)",
     )
     args = parser.parse_args()
 
@@ -72,6 +104,15 @@ def parse_client_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
             if not args.update_rate and 'update_rate' in config_obj['client']:
                 args.update_rate = config_obj.getint('client', 'update_rate')
 
+        # TLS settings
+        if config_obj and config_obj.has_section('security'):
+            if 'enable_tls' in config_obj['security'] and not args.enable_tls and not args.disable_tls:
+                tls_enabled = config_obj.getboolean('security', 'enable_tls')
+                if tls_enabled:
+                    args.enable_tls = True
+                else:
+                    args.disable_tls = True
+
     # Set defaults if not provided
     if not args.server_ip:
         args.server_ip = "127.0.0.1"
@@ -95,7 +136,22 @@ def parse_client_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
         args.password = args.password_hash
     elif not args.password and args.protocol.lower() == 'tcp':
         args.password = getpass.getpass("Enter the authentication password: ")
-    
+
+    # Check password strength and warn if weak
+    if args.password:
+        warn_weak_password(args.password)
+
+    # TLS default: enabled for TCP unless explicitly disabled
+    if not hasattr(args, 'enable_tls'):
+        args.enable_tls = False
+    if not hasattr(args, 'disable_tls'):
+        args.disable_tls = False
+
+    if args.protocol.lower() == 'tcp':
+        if not args.disable_tls and not args.enable_tls:
+            # Default to TLS enabled for TCP
+            args.enable_tls = True
+
     return args, config_obj
 
 def parse_server_args() -> Tuple[argparse.Namespace, Optional[configparser.ConfigParser]]:
@@ -110,6 +166,26 @@ def parse_server_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
     parser.add_argument('--rate-limit-window', type=int, help='Rate limiting window in seconds')
     parser.add_argument('--max-requests', type=int, help='Maximum requests per window')
     parser.add_argument('--block-duration', type=int, help='Block duration in seconds when rate limit is exceeded')
+    parser.add_argument(
+        '--enable-tls',
+        action='store_true',
+        help='Enable TLS/SSL encryption (recommended for security)',
+    )
+    parser.add_argument(
+        '--disable-tls',
+        action='store_true',
+        help='Disable TLS/SSL encryption (use only on trusted networks)',
+    )
+    parser.add_argument(
+        '--cert-path',
+        type=str,
+        help='Path to TLS certificate file (optional, auto-generated if not provided)',
+    )
+    parser.add_argument(
+        '--key-path',
+        type=str,
+        help='Path to TLS private key file (optional, auto-generated if not provided)',
+    )
     args = parser.parse_args()
 
     env_password = os.getenv('PASSWORD')
@@ -136,6 +212,19 @@ def parse_server_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
         if config_obj and config_obj.has_section('vgamepad'):
             if not args.gamepad_type and 'type' in config_obj['vgamepad']:
                 args.gamepad_type = config_obj['vgamepad']['type']
+
+        # TLS settings
+        if config_obj and config_obj.has_section('security'):
+            if 'enable_tls' in config_obj['security'] and not args.enable_tls and not args.disable_tls:
+                tls_enabled = config_obj.getboolean('security', 'enable_tls')
+                if tls_enabled:
+                    args.enable_tls = True
+                else:
+                    args.disable_tls = True
+            if not args.cert_path and 'cert_path' in config_obj['security']:
+                args.cert_path = config_obj['security']['cert_path']
+            if not args.key_path and 'key_path' in config_obj['security']:
+                args.key_path = config_obj['security']['key_path']
 
         # Convert plaintext password to hash if needed
         if (
@@ -182,6 +271,25 @@ def parse_server_args() -> Tuple[argparse.Namespace, Optional[configparser.Confi
         args.password = env_hash
     elif not args.password and args.protocol.lower() == 'tcp':
         args.password = getpass.getpass("Enter authentication password: ")
+
+    # Check password strength and warn if weak
+    if args.password:
+        warn_weak_password(args.password)
+
+    # TLS default: enabled for TCP unless explicitly disabled
+    if not hasattr(args, 'enable_tls'):
+        args.enable_tls = False
+    if not hasattr(args, 'disable_tls'):
+        args.disable_tls = False
+    if not hasattr(args, 'cert_path'):
+        args.cert_path = None
+    if not hasattr(args, 'key_path'):
+        args.key_path = None
+
+    if args.protocol.lower() == 'tcp':
+        if not args.disable_tls and not args.enable_tls:
+            # Default to TLS enabled for TCP
+            args.enable_tls = True
 
     return args, config_obj
 

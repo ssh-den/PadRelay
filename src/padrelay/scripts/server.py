@@ -27,6 +27,7 @@ async def async_main():
         return 1
     
     # Create server application
+    from pathlib import Path
     server = VirtualGamepadServer(
         host=args.host,
         port=args.port,
@@ -36,7 +37,10 @@ async def async_main():
         rate_limit_window=args.rate_limit_window,
         max_requests=args.max_requests,
         block_duration=args.block_duration,
-        protocol=args.protocol
+        protocol=args.protocol,
+        enable_tls=args.enable_tls,
+        cert_path=Path(args.cert_path) if args.cert_path else None,
+        key_path=Path(args.key_path) if args.key_path else None,
     )
     
     # Set up signal handlers for clean shutdown

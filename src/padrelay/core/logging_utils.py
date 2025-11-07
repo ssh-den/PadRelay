@@ -3,6 +3,7 @@
 import logging
 import logging.handlers
 import os
+import re
 from pathlib import Path
 
 
@@ -38,8 +39,12 @@ def _setup_root_logger(log_dir: Path) -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
 
+    # Check for DEBUG environment variable
+    debug_mode = os.getenv("PADRELAY_DEBUG", "").lower() in ("1", "true", "yes", "on")
+    log_level = logging.DEBUG if debug_mode else logging.INFO
+
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(log_level)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
@@ -59,3 +64,29 @@ def get_logger(name: str) -> logging.Logger:
             )
 
     return logging.getLogger(name)
+
+
+def sanitize_for_logging(value: str, max_length: int = 200) -> str:
+    """Sanitize user input before logging to prevent log injection
+
+    Args:
+        value: The string to sanitize
+        max_length: Maximum length of the output string
+
+    Returns:
+        Sanitized string safe for logging
+    """
+    if not isinstance(value, str):
+        value = str(value)
+
+    # Replace newlines and carriage returns to prevent log injection
+    sanitized = value.replace('\n', '\\n').replace('\r', '\\r')
+
+    # Replace other control characters
+    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', sanitized)
+
+    # Limit length to prevent log flooding
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length] + '...'
+
+    return sanitized

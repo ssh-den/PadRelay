@@ -1,9 +1,12 @@
 """Server application for the PadRelay"""
 import asyncio
 import socket
+import ssl
 import gc
 import secrets
 import weakref
+from pathlib import Path
+from typing import Optional
 from datetime import datetime
 from ..core.logging_utils import get_logger
 from ..core.exceptions import AuthenticationError
@@ -12,6 +15,7 @@ from ..protocol.tcp import TCPProtocolHandler
 from ..protocol.udp import UDPServerProtocol
 from ..security.auth import Authenticator
 from ..security.rate_limiting import ConnectionTracker
+from ..security.tls_utils import create_server_ssl_context, warn_if_cert_expiring_soon
 from .virtual_gamepad import VirtualGamepad
 from .input_processor import GamepadHandler
 from .constants import (
@@ -35,6 +39,9 @@ class VirtualGamepadServer:
         max_requests=100,
         block_duration=DEFAULT_BLOCK_DURATION,
         protocol='tcp',
+        enable_tls=False,
+        cert_path: Optional[Path] = None,
+        key_path: Optional[Path] = None,
     ):
         """Construct the server instance
 
@@ -48,12 +55,19 @@ class VirtualGamepadServer:
             max_requests: Maximum number of requests per window
             block_duration: How long to block clients that exceed the rate limit
             protocol: Transport protocol ('tcp' or 'udp')
+            enable_tls: Enable TLS/SSL encryption for TCP connections
+            cert_path: Path to TLS certificate (optional)
+            key_path: Path to TLS private key (optional)
         """
         self.host = host
         self.port = port
         self.protocol = protocol.lower()
         self.config = config
         self.password = password
+        self.enable_tls = enable_tls and self.protocol == 'tcp'
+        self.cert_path = cert_path
+        self.key_path = key_path
+        self.ssl_context: Optional[ssl.SSLContext] = None
         
         # Initialize active clients tracking
         self.active_clients = set()
@@ -81,6 +95,29 @@ class VirtualGamepadServer:
         logger.info(f"Server initialized with {self.protocol.upper()} protocol")
         logger.info(f"Listening on: {self.host}:{self.port}")
         logger.info(f"Gamepad type: {self.gamepad_type}")
+
+        # Initialize TLS if enabled
+        if self.enable_tls:
+            try:
+                self.ssl_context = create_server_ssl_context(self.cert_path, self.key_path, auto_generate=True)
+                if self.ssl_context:
+                    logger.info("TLS/SSL encryption enabled")
+                    warn_if_cert_expiring_soon(self.cert_path)
+                else:
+                    logger.error("Failed to create SSL context, continuing without TLS")
+                    self.enable_tls = False
+            except Exception as e:
+                logger.error(f"Failed to initialize TLS: {e}")
+                logger.warning("Continuing without TLS encryption")
+                self.enable_tls = False
+        else:
+            if self.protocol == 'tcp':
+                logger.warning(
+                    "TLS/SSL encryption is DISABLED. "
+                    "Network traffic will be transmitted in plaintext. "
+                    "Use --enable-tls to enable encryption, or ensure you're on a trusted network."
+                )
+
         if not self.password:
             logger.warning(
                 "Server is running without authentication! "
@@ -136,6 +173,7 @@ class VirtualGamepadServer:
                 self._handle_tcp_client,
                 self.host,
                 self.port,
+                ssl=self.ssl_context if self.enable_tls else None,
             )
             
             addr = server.sockets[0].getsockname()
@@ -177,7 +215,22 @@ class VirtualGamepadServer:
         """
         addr = writer.get_extra_info('peername')
         logger.info(f"New TCP connection from {addr}")
-        
+
+        # Log TLS connection details if enabled
+        if self.enable_tls:
+            ssl_object = writer.get_extra_info('ssl_object')
+            if ssl_object:
+                cipher = ssl_object.cipher()
+                tls_version = ssl_object.version()
+                logger.info(f"TLS connection established from {addr}")
+                logger.debug(f"TLS handshake details:")
+                logger.debug(f"  TLS version: {tls_version}")
+                if cipher:
+                    logger.debug(f"  Cipher: {cipher[0]} (bits: {cipher[2]})")
+                    logger.debug(f"  Protocol: {cipher[1]}")
+            else:
+                logger.warning(f"TLS enabled but no SSL object found for connection from {addr}")
+
         # Initialize protocol handler
         tcp_handler = TCPProtocolHandler(reader, writer)
         
@@ -210,6 +263,7 @@ class VirtualGamepadServer:
             # Authentication
             try:
                 challenge = secrets.token_hex(16)
+                logger.debug(f"Sending authentication challenge to {addr}")
                 auth_challenge = {
                     "type": "auth_challenge",
                     "protocol_version": "1.0",
@@ -243,6 +297,7 @@ class VirtualGamepadServer:
                         return
                     
                     # Verify HMAC
+                    logger.debug(f"Verifying authentication response from {addr}")
                     if not self.authenticator.verify_tcp_response(challenge, auth_response["response"]):
                         logger.warning(f"Failed authentication attempt from {addr}")
                         await tcp_handler.send_message({
@@ -253,8 +308,9 @@ class VirtualGamepadServer:
                         await tcp_handler.drain()
                         tcp_handler.close()
                         return
-                    
+
                     # Authentication successful
+                    logger.debug(f"Authentication successful for {addr}")
                     await tcp_handler.send_message({
                         "type": "auth_success",
                         "protocol_version": "1.0"

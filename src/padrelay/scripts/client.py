@@ -32,7 +32,8 @@ async def async_main():
         gamepad=gamepad,
         update_rate=args.update_rate,
         password=args.password,
-        config=config_obj
+        config=config_obj,
+        enable_tls=args.enable_tls,
     )
     
     # Set up signal handlers

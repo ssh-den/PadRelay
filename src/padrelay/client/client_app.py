@@ -3,6 +3,7 @@ import asyncio
 import time
 import random
 import json
+import ssl
 from datetime import datetime
 import socket
 from typing import Optional
@@ -12,6 +13,7 @@ from ..protocol.constants import HEARTBEAT_INTERVAL, PROTOCOL_VERSION
 from ..protocol.tcp import TCPProtocolHandler
 from ..protocol.udp import UDPProtocolHandler
 from ..security.auth import Authenticator
+from ..security.tls_utils import create_client_ssl_context
 from .constants import RECONNECT_DELAY
 from .input import GamepadInput
 
@@ -43,6 +45,7 @@ class VirtualGamepadClient:
         update_rate: int = 60,
         password: Optional[str] = None,
         config: Optional[object] = None,
+        enable_tls: bool = False,
     ) -> None:
         """Construct the client and configure networking"""
         self.server_ip = server_ip
@@ -51,9 +54,28 @@ class VirtualGamepadClient:
         self.gamepad = gamepad
         self.update_rate = update_rate
         self.config = config
-        
+        self.enable_tls = enable_tls and self.protocol == 'tcp'
+        self.ssl_context: Optional[ssl.SSLContext] = None
+
         # Security
         self.authenticator = Authenticator(password)
+
+        # Initialize TLS if enabled
+        if self.enable_tls:
+            try:
+                self.ssl_context = create_client_ssl_context(verify_cert=False)
+                logger.info("TLS/SSL encryption enabled")
+            except Exception as e:
+                logger.error(f"Failed to initialize TLS: {e}")
+                logger.warning("Continuing without TLS encryption")
+                self.enable_tls = False
+        else:
+            if self.protocol == 'tcp':
+                logger.warning(
+                    "TLS/SSL encryption is DISABLED. "
+                    "Network traffic will be transmitted in plaintext. "
+                    "Use --enable-tls to enable encryption, or ensure you're on a trusted network."
+                )
         
         # Connection state
         self.connected = False
@@ -120,8 +142,30 @@ class VirtualGamepadClient:
             try:
                 # Connect to server
                 logger.info(f"Connecting to TCP server at {self.server_ip}:{self.server_port}...")
-                reader, writer = await asyncio.open_connection(self.server_ip, self.server_port)
-                
+                reader, writer = await asyncio.open_connection(
+                    self.server_ip,
+                    self.server_port,
+                    ssl=self.ssl_context if self.enable_tls else None,
+                    server_hostname=self.server_ip if self.enable_tls else None,
+                )
+
+                logger.info(f"Connected to server at {self.server_ip}:{self.server_port}")
+
+                # Log TLS connection details if enabled
+                if self.enable_tls:
+                    ssl_object = writer.get_extra_info('ssl_object')
+                    if ssl_object:
+                        cipher = ssl_object.cipher()
+                        tls_version = ssl_object.version()
+                        logger.info(f"TLS handshake successful")
+                        logger.debug(f"TLS connection details:")
+                        logger.debug(f"  TLS version: {tls_version}")
+                        if cipher:
+                            logger.debug(f"  Cipher: {cipher[0]} (bits: {cipher[2]})")
+                            logger.debug(f"  Protocol: {cipher[1]}")
+                    else:
+                        logger.warning(f"TLS enabled but no SSL object found")
+
                 # Initialize protocol handler
                 tcp_handler = TCPProtocolHandler(reader, writer)
                 
@@ -225,25 +269,31 @@ class VirtualGamepadClient:
         """Authenticate with the server over TCP"""
         try:
             # Wait for auth challenge from server
+            logger.debug("Waiting for authentication challenge from server")
             challenge_msg = await tcp_handler.read_message()
             if not challenge_msg or challenge_msg.get("type") != "auth_challenge":
                 logger.error("Authentication protocol error: Invalid challenge")
                 return False
-                
+
+            logger.debug("Received authentication challenge")
+
             # Extract challenge and verify protocol version
             challenge = challenge_msg.get("challenge")
             salt = challenge_msg.get("salt")
             iterations = challenge_msg.get("iterations")
             if salt and iterations:
+                logger.debug(f"Updating authenticator parameters (iterations: {iterations})")
                 self.authenticator.set_parameters(salt, int(iterations))
             if challenge_msg.get("protocol_version") != PROTOCOL_VERSION:
                 logger.error(f"Protocol version mismatch: server={challenge_msg.get('protocol_version')}, client={PROTOCOL_VERSION}")
                 return False
-                
+
             # Calculate HMAC response
+            logger.debug("Generating authentication response")
             response = self.authenticator.generate_tcp_response(challenge)
-            
+
             # Send auth response
+            logger.debug("Sending authentication response")
             auth_response = {
                 "type": "auth_response",
                 "protocol_version": PROTOCOL_VERSION,
@@ -251,12 +301,13 @@ class VirtualGamepadClient:
             }
             await tcp_handler.send_message(auth_response)
             await tcp_handler.drain()
-            
+
             # Wait for auth result
+            logger.debug("Waiting for authentication result")
             result = await tcp_handler.read_message()
             if not result:
                 return False
-                
+
             if result.get("type") == "auth_success":
                 logger.info("Authentication successful")
                 return True

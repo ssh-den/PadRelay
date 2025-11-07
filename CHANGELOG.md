@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [1.1.0] - 2025-11-06
+
+### Added
+- **TLS/SSL Support**: Optional TLS/SSL encryption for TCP connections with automatic self-signed certificate generation
+  - `--enable-tls` / `--disable-tls` flags for both client and server
+  - Automatic certificate generation and management (stored in `~/.padrelay/certs/`)
+  - Certificate expiration warnings
+  - TLS 1.2+ minimum version requirement
+  - Server: `--cert-path` and `--key-path` options for custom certificates
+- **Password Strength Warnings**: Non-enforcing password strength checking with recommendations
+  - Automatic password strength analysis on startup
+  - Detailed recommendations for improving weak passwords
+  - Warnings about very weak or commonly used passwords
+- **Security Enhancements**:
+  - Log sanitization to prevent log injection attacks
+  - Config file permission warnings for world-readable files
+- **Dependencies**: Added `cryptography>=41.0.0` and `cffi>=1.15.0` for TLS support
+
+### Changed
+- TLS/SSL is now enabled by default for TCP connections (can be disabled with `--disable-tls`)
+- Enhanced security warnings throughout the application
+- Improved error messages for security-related issues
+
 ## [1.0.4] - 2025-06-15
 
 ### Added
@@ -36,6 +59,7 @@ and this project adheres to [Semantic Versioning].
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 <!-- Versions -->
+[1.1.0]: https://github.com/ssh-den/PadRelay/releases/tag/v1.1.0
 [1.0.4]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.4
 [1.0.3]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.3
 [1.0.2]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.2

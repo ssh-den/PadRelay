@@ -1,0 +1,10 @@
+# Sphinx documentation build requirements
+sphinx>=5.0.0
+sphinx_rtd_theme>=1.0.0
+sphinx-autodoc-typehints>=1.19.0
+
+# Project dependencies (needed for autodoc)
+pygame>=2.0.0
+
+# Optional: Mock vgamepad for building docs on non-Windows systems
+# (autodoc needs to import modules, but vgamepad only works on Windows)

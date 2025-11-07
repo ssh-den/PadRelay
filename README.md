@@ -30,15 +30,15 @@ padrelay-client --config config/client_config.ini
 padrelay-keymapper --output my_config.ini
 ```
 
-PadRelay includes a `padrelay-keymapper` utility for creating custom controller-to-virtual-pad mappings. See the [key mapper documentation](KEY_MAPPER.md) for details on using this tool.
+See the [full documentation](https://padrelay.readthedocs.io) for detailed guides.
 
 #### From Source (Development Mode)
 
 If you want to run the project directly from source (e.g. for development), clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/yourusername/padrelay.git
-cd padrelay
+git clone https://github.com/ssh-den/PadRelay.git
+cd PadRelay
 pip install -r requirements.txt
 ```
 
@@ -61,7 +61,7 @@ When running the server on Windows install [vgamepad](https://pypi.org/project/v
 ## Configuration
 
 Example INI files live in the `config/` directory.  A trimmed server configuration looks like:
-For a detailed explanation of every setting see [the full configuration reference](CONFIGURATION.md).
+For a detailed explanation of every setting see the [configuration documentation](https://padrelay.readthedocs.io/en/latest/configuration.html).
 
 ```ini
 [server]
@@ -150,16 +150,53 @@ root by default. The directory will be created automatically if it does not
 exist. Set the ``PADRELAY_LOG_DIR`` environment variable to override this
 location. Logs are rotated automatically and never include passwords or tokens.
 
-## Disclaimer
+## Documentation
 
-**Security Notice**
+📚 **Comprehensive documentation is available at [https://padrelay.readthedocs.io](https://padrelay.readthedocs.io)**
 
-PadRelay does **not** implement TLS or any built-in encryption. It is intended for use on **trusted, private networks** only.  
-You should always secure communication via a **VPN, SSH tunnel**, or other private channel. **Never expose the server directly to the public internet.**
+* [Installation Guide](https://padrelay.readthedocs.io/en/latest/installation.html)
+* [Quick Start](https://padrelay.readthedocs.io/en/latest/quickstart.html)
+* [Configuration Reference](https://padrelay.readthedocs.io/en/latest/configuration.html)
+* [TLS/SSL Setup](https://padrelay.readthedocs.io/en/latest/user_guide/tls_setup.html)
+* [Troubleshooting](https://padrelay.readthedocs.io/en/latest/user_guide/troubleshooting.html)
+* [API Reference](https://padrelay.readthedocs.io/en/latest/api.html)
+
+## Security
+
+**Version 1.1.0+ includes TLS/SSL support!**
+
+* TLS encryption is **enabled by default** for TCP connections
+* Automatic self-signed certificate generation
+* PBKDF2 password hashing for secure authentication
+* Rate limiting to prevent abuse
+
+For best security:
+* Use TLS for all TCP connections (enabled by default)
+* Use strong passwords (12+ characters)
+* Run on trusted private networks or VPNs
+* Never expose the server directly to the public internet
+
+See the [Security Documentation](https://padrelay.readthedocs.io/en/latest/security.html) for details.
 
 Use this software **at your own risk**. The author assumes no responsibility for data loss, damage, or security issues resulting from its use.
 
-**Bug Reports**
+## Contributing
 
-This project is under active development. If you encounter any issues, misbehavior, or unexpected crashes, please open an issue on GitHub with steps to reproduce.  
-Contributions and pull requests are always welcome.
+Contributions are welcome! Please see the [Contributing Guide](https://padrelay.readthedocs.io/en/latest/contributing.html) for details.
+
+**Bug Reports:** Open an issue on GitHub with steps to reproduce.
+
+**Feature Requests:** Suggest improvements via GitHub issues.
+
+**Pull Requests:** Fork the repository, make changes, and submit a PR.
+
+## Links
+
+* **Documentation:** https://padrelay.readthedocs.io
+* **PyPI:** https://pypi.org/project/padrelay/
+* **GitHub:** https://github.com/ssh-den/PadRelay
+* **Issues:** https://github.com/ssh-den/PadRelay/issues
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
