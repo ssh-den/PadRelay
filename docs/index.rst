@@ -79,7 +79,7 @@ Documentation Contents
 
    development
    contributing
-   changelog
+   ../CHANGELOG
 
 Indices and tables
 ==================
