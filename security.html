@@ -1,0 +1,1415 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security &mdash; PadRelay 1.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Protocol Specification" href="protocol.html" />
+    <link rel="prev" title="Architecture" href="architecture.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2980B9" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PadRelay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#system-requirements">System Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#client-requirements">Client Requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#server-requirements">Server Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-methods">Installation Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#method-1-install-from-pypi-recommended">Method 1: Install from PyPI (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#method-2-install-from-source">Method 2: Install from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#method-3-install-dependencies-manually">Method 3: Install Dependencies Manually</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-vigembus-windows-server-only">Installing ViGEmBus (Windows Server Only)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#optional-dependencies">Optional Dependencies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#tls-ssl-support">TLS/SSL Support</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#verifying-installation">Verifying Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#client-verification">Client Verification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#server-verification-windows">Server Verification (Windows)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#key-mapper-verification">Key Mapper Verification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#testing-gamepad-detection">Testing Gamepad Detection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#upgrading">Upgrading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#uninstallation">Uninstallation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#troubleshooting-installation">Troubleshooting Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#permission-errors">Permission Errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#vgamepad-installation-fails">vgamepad Installation Fails</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#pygame-installation-issues">pygame Installation Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#basic-setup">Basic Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#step-1-create-configuration-files">Step 1: Create Configuration Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#step-2-start-the-server">Step 2: Start the Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#step-3-start-the-client">Step 3: Start the Client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#step-4-test-the-connection">Step 4: Test the Connection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#using-command-line-arguments">Using Command-Line Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#using-udp-for-lower-latency">Using UDP for Lower Latency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#environment-variables">Environment Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#pre-hashed-passwords">Pre-Hashed Passwords</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#mapping-custom-controllers">Mapping Custom Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#running-from-source">Running from Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#common-issues">Common Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#failed-to-initialize-gamepad">“Failed to initialize gamepad”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#connection-refused">“Connection refused”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#authentication-failed">“Authentication failed”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#tls-handshake-failed">“TLS handshake failed”</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#configuration-files">Configuration Files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#configuration-priority">Configuration Priority</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#client-configuration">Client Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#network-settings">Network Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#joystick-settings">Joystick Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#client-settings">Client Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#client-command-line-flags">Client Command-Line Flags</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#server-configuration">Server Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#server-settings">Server Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#virtual-gamepad-settings">Virtual Gamepad Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#button-mapping">Button Mapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#axis-mapping">Axis Mapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#axis-options">Axis Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#server-command-line-flags">Server Command-Line Flags</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#environment-variables">Environment Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#tls-ssl-configuration">TLS/SSL Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#certificate-management">Certificate Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#custom-certificates">Custom Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#disabling-tls">Disabling TLS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#password-security">Password Security</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#password-hashing">Password Hashing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#pre-hashing-passwords">Pre-Hashing Passwords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#password-strength">Password Strength</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#example-configuration-files">Example Configuration Files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#minimal-tcp-setup">Minimal TCP Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#udp-low-latency-setup">UDP Low-Latency Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="configuration.html#custom-controller-mapping">Custom Controller Mapping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/client.html">Client Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#basic-usage">Basic Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#starting-the-client">Starting the Client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#stopping-the-client">Stopping the Client</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#configuration">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#configuration-file">Configuration File</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#environment-variables">Environment Variables</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#gamepad-detection">Gamepad Detection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#listing-available-gamepads">Listing Available Gamepads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#selecting-a-gamepad">Selecting a Gamepad</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#multiple-gamepads">Multiple Gamepads</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#update-rate">Update Rate</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#choosing-an-update-rate">Choosing an Update Rate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#bandwidth-usage">Bandwidth Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#protocol-selection">Protocol Selection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#tcp-vs-udp">TCP vs UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#when-to-use-tcp">When to Use TCP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#when-to-use-udp">When to Use UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#switching-protocols">Switching Protocols</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#tls-configuration">TLS Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#enable-tls">Enable TLS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#disable-tls">Disable TLS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#automatic-reconnection">Automatic Reconnection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#reconnection-scenarios">Reconnection Scenarios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#manual-reconnection">Manual Reconnection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#logging">Logging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#log-location">Log Location</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#log-levels">Log Levels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#enable-debug-logging">Enable Debug Logging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#gamepad-not-detected">Gamepad Not Detected</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#connection-refused">Connection Refused</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#authentication-failed">Authentication Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#tls-handshake-failed">TLS Handshake Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#high-latency">High Latency</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#input-not-working">Input Not Working</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#advanced-usage">Advanced Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#running-from-python">Running from Python</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#custom-input-processing">Custom Input Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/client.html#running-as-a-service">Running as a Service</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/client.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/server.html">Server Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#basic-usage">Basic Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#starting-the-server">Starting the Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#stopping-the-server">Stopping the Server</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#configuration">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#basic-configuration">Basic Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#virtual-gamepad-types">Virtual Gamepad Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#xbox-360-controller">Xbox 360 Controller</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#dualshock-4-controller">DualShock 4 Controller</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#verifying-virtual-gamepad">Verifying Virtual Gamepad</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#network-configuration">Network Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#binding-address">Binding Address</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#port-selection">Port Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#firewall-configuration">Firewall Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#windows-firewall">Windows Firewall</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#third-party-firewalls">Third-Party Firewalls</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#rate-limiting">Rate Limiting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#udp-rate-limits">UDP Rate Limits</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#adjusting-rate-limits">Adjusting Rate Limits</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#button-and-axis-mapping">Button and Axis Mapping</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#custom-button-mappings">Custom Button Mappings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#custom-axis-mappings">Custom Axis Mappings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#axis-options">Axis Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#password-management">Password Management</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#automatic-hashing">Automatic Hashing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#pre-hashing-passwords">Pre-Hashing Passwords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#environment-variables">Environment Variables</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#tls-ssl-configuration">TLS/SSL Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#using-auto-generated-certificates">Using Auto-Generated Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#using-custom-certificates">Using Custom Certificates</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#multiple-clients">Multiple Clients</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#logging">Logging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#debug-logging">Debug Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#log-rotation">Log Rotation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#virtual-gamepad-not-appearing">Virtual Gamepad Not Appearing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#port-already-in-use">Port Already in Use</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#authentication-failures">Authentication Failures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/server.html#performance-issues">Performance Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#running-as-windows-service">Running as Windows Service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/server.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/key_mapper.html">Key Mapper Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#when-to-use">When to Use</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#running-the-key-mapper">Running the Key Mapper</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#interactive-session">Interactive Session</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#options">Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#mapping-process">Mapping Process</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#button-mapping">Button Mapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#axis-mapping">Axis Mapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#skipping-mappings">Skipping Mappings</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#using-generated-configuration">Using Generated Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#server-configuration">Server Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#client-configuration">Client Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#configuration-file-format">Configuration File Format</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#example-output">Example Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#manual-editing">Manual Editing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#swapping-buttons">Swapping Buttons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#inverting-axes">Inverting Axes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#adjusting-dead-zones">Adjusting Dead Zones</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#common-controller-mappings">Common Controller Mappings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#controller-not-detected">Controller Not Detected</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#incorrect-button-detection">Incorrect Button Detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#d-pad-not-working">D-Pad Not Working</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#axis-values-inverted">Axis Values Inverted</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#sharing-configurations">Sharing Configurations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#advanced-usage">Advanced Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#mapping-multiple-controllers">Mapping Multiple Controllers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#macro-support">Macro Support</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#example-1-ps4-controller">Example 1: PS4 Controller</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/key_mapper.html#example-2-custom-flight-stick">Example 2: Custom Flight Stick</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/key_mapper.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/tls_setup.html">TLS/SSL Setup Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#quick-start">Quick Start</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#using-auto-generated-certificates">Using Auto-Generated Certificates</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#certificate-locations">Certificate Locations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#auto-generated-certificates">Auto-Generated Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#certificate-properties">Certificate Properties</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#viewing-certificate-details">Viewing Certificate Details</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#using-custom-certificates">Using Custom Certificates</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#generating-with-openssl">Generating with OpenSSL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#using-let-s-encrypt">Using Let’s Encrypt</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#configuring-custom-certificates">Configuring Custom Certificates</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#tls-configuration">TLS Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#tls-version">TLS Version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#cipher-suites">Cipher Suites</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#disabling-tls">Disabling TLS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#when-to-disable">When to Disable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#how-to-disable">How to Disable</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#certificate-management">Certificate Management</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#certificate-expiration">Certificate Expiration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#renewing-certificates">Renewing Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#certificate-rotation">Certificate Rotation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#troubleshooting-tls">Troubleshooting TLS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#tls-handshake-failed">TLS Handshake Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#certificate-validation-failed">Certificate Validation Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#permission-denied">Permission Denied</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#certificate-not-found">Certificate Not Found</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#debug-tls-issues">Debug TLS Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#security-considerations">Security Considerations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#self-signed-certificates">Self-Signed Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#ca-signed-certificates">CA-Signed Certificates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#network-security">Network Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#vpn-vs-tls">VPN vs TLS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#testing-tls-connection">Testing TLS Connection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#verify-tls-is-working">Verify TLS is Working</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/tls_setup.html#using-openssl-client">Using OpenSSL Client</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tls_setup.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/troubleshooting.html">Troubleshooting Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#general-troubleshooting-steps">General Troubleshooting Steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#connection-issues">Connection Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#connection-refused">Connection Refused</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#connection-timeout">Connection Timeout</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#connection-drops">Connection Drops</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#authentication-issues">Authentication Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#authentication-failed">Authentication Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#invalid-token-udp">Invalid Token (UDP)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#gamepad-issues">Gamepad Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#gamepad-not-detected">Gamepad Not Detected</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#buttons-not-working">Buttons Not Working</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#axes-inverted-or-wrong">Axes Inverted or Wrong</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#virtual-gamepad-issues">Virtual Gamepad Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#virtual-gamepad-not-appearing">Virtual Gamepad Not Appearing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#gamepad-input-lag">Gamepad Input Lag</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#tls-ssl-issues">TLS/SSL Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#tls-handshake-failed">TLS Handshake Failed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#certificate-errors">Certificate Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#performance-issues">Performance Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#high-cpu-usage">High CPU Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#high-bandwidth-usage">High Bandwidth Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#rate-limiting-issues">Rate Limiting Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#rate-limit-exceeded">Rate Limit Exceeded</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#protocol-issues">Protocol Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#protocol-version-mismatch">Protocol Version Mismatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#udp-packet-loss">UDP Packet Loss</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#installation-issues">Installation Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#vgamepad-installation-fails">vgamepad Installation Fails</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#pygame-installation-issues">pygame Installation Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#debug-mode">Debug Mode</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#enabling-debug-logging">Enabling Debug Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#what-debug-mode-shows">What Debug Mode Shows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#reading-debug-logs">Reading Debug Logs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#common-log-messages">Common Log Messages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#understanding-warnings">Understanding Warnings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#understanding-errors">Understanding Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#getting-help">Getting Help</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#before-asking-for-help">Before Asking for Help</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#reporting-issues">Reporting Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="user_guide/troubleshooting.html#where-to-get-help">Where to Get Help</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Technical Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#system-overview">System Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#architecture-diagram">Architecture Diagram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#component-architecture">Component Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#client-components">Client Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#server-components">Server Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#shared-components">Shared Components</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#communication-flow">Communication Flow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#tcp-connection-flow">TCP Connection Flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#udp-connection-flow">UDP Connection Flow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#message-format">Message Format</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#input-message">Input Message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#authentication-messages">Authentication Messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#security-architecture">Security Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#authentication">Authentication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#password-hashing">Password Hashing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#tls-ssl">TLS/SSL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#rate-limiting">Rate Limiting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#data-flow">Data Flow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#input-capture-to-virtual-output">Input Capture to Virtual Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#threading-model">Threading Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#client">Client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#server">Server</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#configuration-system">Configuration System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#extension-points">Extension Points</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#custom-button-mappings">Custom Button Mappings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#custom-axis-transformations">Custom Axis Transformations</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#performance-considerations">Performance Considerations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#latency-sources">Latency Sources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#optimization-strategies">Optimization Strategies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#memory-usage">Memory Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#design-principles">Design Principles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Security</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#security-model">Security Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#threat-model">Threat Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#assumptions">Assumptions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#threats-addressed">Threats Addressed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#threats-not-addressed">Threats Not Addressed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#authentication">Authentication</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#password-based-authentication">Password-Based Authentication</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#password-hashing">Password Hashing</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#tcp-challenge-response">TCP Challenge-Response</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#udp-token-authentication">UDP Token Authentication</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#encryption">Encryption</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tls-ssl-support">TLS/SSL Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#certificate-management">Certificate Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#self-signed-certificates">Self-Signed Certificates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#custom-certificates">Custom Certificates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#certificate-expiration">Certificate Expiration</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#disabling-tls">Disabling TLS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#rate-limiting">Rate Limiting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#purpose">Purpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#algorithm">Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bypass">Bypass</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#input-validation">Input Validation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#button-validation">Button Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#axis-validation">Axis Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#message-validation">Message Validation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#secure-coding-practices">Secure Coding Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#log-sanitization">Log Sanitization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#file-permissions">File Permissions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#secrets-management">Secrets Management</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#network-security">Network Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#password-security">Password Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#certificate-security">Certificate Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#operational-security">Operational Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#debug-logging">Debug Logging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#reporting-security-issues">Reporting Security Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="protocol.html">Protocol Specification</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#protocol-overview">Protocol Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#protocol-version">Protocol Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#transport-layers">Transport Layers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#tcp-transport">TCP Transport</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#udp-transport">UDP Transport</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#message-format">Message Format</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#base-message-structure">Base Message Structure</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#message-types">Message Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#input-message">Input Message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#authentication-messages">Authentication Messages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#challenge-message">Challenge Message</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#response-message">Response Message</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#success-message">Success Message</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#failed-message">Failed Message</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#parameters-request">Parameters Request</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#parameters-response">Parameters Response</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#heartbeat-messages">Heartbeat Messages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#heartbeat">Heartbeat</a></li>
+<li class="toctree-l4"><a class="reference internal" href="protocol.html#heartbeat-acknowledgment">Heartbeat Acknowledgment</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#error-message">Error Message</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#connection-flows">Connection Flows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#tcp-connection-flow">TCP Connection Flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#udp-connection-flow">UDP Connection Flow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#authentication-details">Authentication Details</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#tcp-challenge-response">TCP Challenge-Response</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#udp-token-authentication">UDP Token Authentication</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#rate-limiting">Rate Limiting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#error-handling">Error Handling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#protocol-errors">Protocol Errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#connection-errors">Connection Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#compatibility">Compatibility</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#version-negotiation">Version Negotiation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#extensibility">Extensibility</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#constants">Constants</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#message-size-limits">Message Size Limits</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#performance-considerations">Performance Considerations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#bandwidth-usage">Bandwidth Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol.html#latency">Latency</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="protocol.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#client-module">Client Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.client.client_app">Client Application</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.client.client_app.UDPClientProtocol"><code class="docutils literal notranslate"><span class="pre">UDPClientProtocol</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.client.client_app.VirtualGamepadClient"><code class="docutils literal notranslate"><span class="pre">VirtualGamepadClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.client.input">Input Handling</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.client.input.GamepadInput"><code class="docutils literal notranslate"><span class="pre">GamepadInput</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.client.constants">Client Constants</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#server-module">Server Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.server.server_app">Server Application</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.server.server_app.VirtualGamepadServer"><code class="docutils literal notranslate"><span class="pre">VirtualGamepadServer</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.server.input_processor">Input Processor</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.server.input_processor.GamepadHandler"><code class="docutils literal notranslate"><span class="pre">GamepadHandler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.server.virtual_gamepad">Virtual Gamepad</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.server.virtual_gamepad.VirtualGamepad"><code class="docutils literal notranslate"><span class="pre">VirtualGamepad</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.server.constants">Server Constants</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#protocol-module">Protocol Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.protocol.tcp">TCP Protocol</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.tcp.TCPProtocolHandler"><code class="docutils literal notranslate"><span class="pre">TCPProtocolHandler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.protocol.udp">UDP Protocol</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.udp.UDPProtocolHandler"><code class="docutils literal notranslate"><span class="pre">UDPProtocolHandler</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.udp.UDPServerProtocol"><code class="docutils literal notranslate"><span class="pre">UDPServerProtocol</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.protocol.messages">Messages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.BaseMessage"><code class="docutils literal notranslate"><span class="pre">BaseMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.InputMessage"><code class="docutils literal notranslate"><span class="pre">InputMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.HeartbeatMessage"><code class="docutils literal notranslate"><span class="pre">HeartbeatMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.HeartbeatAckMessage"><code class="docutils literal notranslate"><span class="pre">HeartbeatAckMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthChallengeMessage"><code class="docutils literal notranslate"><span class="pre">AuthChallengeMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthResponseMessage"><code class="docutils literal notranslate"><span class="pre">AuthResponseMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthSuccessMessage"><code class="docutils literal notranslate"><span class="pre">AuthSuccessMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthFailedMessage"><code class="docutils literal notranslate"><span class="pre">AuthFailedMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthParamsRequestMessage"><code class="docutils literal notranslate"><span class="pre">AuthParamsRequestMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.AuthParamsMessage"><code class="docutils literal notranslate"><span class="pre">AuthParamsMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.ErrorMessage"><code class="docutils literal notranslate"><span class="pre">ErrorMessage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.protocol.messages.validate_input_message"><code class="docutils literal notranslate"><span class="pre">validate_input_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.protocol.constants">Protocol Constants</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#security-module">Security Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.security.auth">Authentication</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.auth.Authenticator"><code class="docutils literal notranslate"><span class="pre">Authenticator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.security.rate_limiting">Rate Limiting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.rate_limiting.ConnectionTracker"><code class="docutils literal notranslate"><span class="pre">ConnectionTracker</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.security.tls_utils">TLS Utilities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.get_default_cert_paths"><code class="docutils literal notranslate"><span class="pre">get_default_cert_paths()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.ensure_cert_dir_exists"><code class="docutils literal notranslate"><span class="pre">ensure_cert_dir_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.generate_self_signed_cert"><code class="docutils literal notranslate"><span class="pre">generate_self_signed_cert()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.create_server_ssl_context"><code class="docutils literal notranslate"><span class="pre">create_server_ssl_context()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.create_client_ssl_context"><code class="docutils literal notranslate"><span class="pre">create_client_ssl_context()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.check_cert_expiration"><code class="docutils literal notranslate"><span class="pre">check_cert_expiration()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.tls_utils.warn_if_cert_expiring_soon"><code class="docutils literal notranslate"><span class="pre">warn_if_cert_expiring_soon()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.security.password_strength">Password Strength</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.password_strength.check_password_strength"><code class="docutils literal notranslate"><span class="pre">check_password_strength()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.password_strength.warn_weak_password"><code class="docutils literal notranslate"><span class="pre">warn_weak_password()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.security.password_strength.generate_password_suggestion"><code class="docutils literal notranslate"><span class="pre">generate_password_suggestion()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#core-module">Core Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.core.config">Configuration</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.config.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.config.parse_client_args"><code class="docutils literal notranslate"><span class="pre">parse_client_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.config.parse_server_args"><code class="docutils literal notranslate"><span class="pre">parse_server_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.config.validate_server_config"><code class="docutils literal notranslate"><span class="pre">validate_server_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.core.exceptions">Exceptions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.GamepadBridgeError"><code class="docutils literal notranslate"><span class="pre">GamepadBridgeError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.ProtocolError"><code class="docutils literal notranslate"><span class="pre">ProtocolError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.AuthenticationError"><code class="docutils literal notranslate"><span class="pre">AuthenticationError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.ConnectionError"><code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.ConfigurationError"><code class="docutils literal notranslate"><span class="pre">ConfigurationError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.exceptions.InputError"><code class="docutils literal notranslate"><span class="pre">InputError</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.core.logging_utils">Logging Utilities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.logging_utils.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.core.logging_utils.sanitize_for_logging"><code class="docutils literal notranslate"><span class="pre">sanitize_for_logging()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#scripts-module">Scripts Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.scripts.server">Server Entry Point</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.server.async_main"><code class="docutils literal notranslate"><span class="pre">async_main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.server.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.scripts.client">Client Entry Point</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.client.async_main"><code class="docutils literal notranslate"><span class="pre">async_main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.client.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-padrelay.scripts.key_mapper">Key Mapper</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.key_mapper.ControllerMapper"><code class="docutils literal notranslate"><span class="pre">ControllerMapper</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#padrelay.scripts.key_mapper.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#usage-examples">Usage Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#creating-a-client-programmatically">Creating a Client Programmatically</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#creating-a-server-programmatically">Creating a Server Programmatically</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#using-the-authenticator">Using the Authenticator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#custom-message-creation">Custom Message Creation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#rate-limiting-example">Rate Limiting Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#tls-certificate-generation">TLS Certificate Generation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Development Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="development.html#development-setup">Development Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#clone-repository">Clone Repository</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#create-virtual-environment">Create Virtual Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#install-dependencies">Install Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#project-structure">Project Structure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#directory-layout">Directory Layout</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#code-organization">Code Organization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#running-tests">Running Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#run-all-tests">Run All Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#run-specific-test-file">Run Specific Test File</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#run-with-coverage">Run with Coverage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#run-specific-test">Run Specific Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#test-organization">Test Organization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#coding-standards">Coding Standards</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#style-guide">Style Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#type-hints">Type Hints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#docstrings">Docstrings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#code-formatting">Code Formatting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#linting">Linting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#common-development-tasks">Common Development Tasks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#adding-a-new-message-type">Adding a New Message Type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#adding-a-new-configuration-option">Adding a New Configuration Option</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#adding-authentication-method">Adding Authentication Method</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#debugging">Debugging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#using-debug-mode">Using Debug Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#using-python-debugger">Using Python Debugger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#logging">Logging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#performance-profiling">Performance Profiling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#using-cprofile">Using cProfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#memory-profiling">Memory Profiling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#building-documentation">Building Documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#install-sphinx">Install Sphinx</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#build-html-documentation">Build HTML Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#build-pdf-documentation">Build PDF Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#release-process">Release Process</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="development.html#version-numbering">Version Numbering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#creating-a-release">Creating a Release</a></li>
+<li class="toctree-l3"><a class="reference internal" href="development.html#manual-pypi-upload">Manual PyPI Upload</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#architecture-documentation">Architecture Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#security-considerations">Security Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#useful-resources">Useful Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#ways-to-contribute">Ways to Contribute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#getting-started">Getting Started</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#fork-the-repository">1. Fork the Repository</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#clone-your-fork">2. Clone Your Fork</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#set-up-development-environment">3. Set Up Development Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#create-a-branch">4. Create a Branch</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#contribution-workflow">Contribution Workflow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#make-changes">1. Make Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#test-your-changes">2. Test Your Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#commit-your-changes">3. Commit Your Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#push-to-your-fork">4. Push to Your Fork</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#create-pull-request">5. Create Pull Request</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#pr-template">PR Template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#pr-review-process">PR Review Process</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-style">Code Style</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#python-style">Python Style</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#documentation-style">Documentation Style</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#testing-guidelines">Testing Guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#write-tests">Write Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#test-coverage">Test Coverage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#bug-reports">Bug Reports</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#reporting-bugs">Reporting Bugs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#example-bug-report">Example Bug Report</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#feature-requests">Feature Requests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#proposing-features">Proposing Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#example-feature-request">Example Feature Request</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#documentation-contributions">Documentation Contributions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#types-of-documentation">Types of Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#documentation-standards">Documentation Standards</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#building-documentation">Building Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#controller-mapping-contributions">Controller Mapping Contributions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#share-your-mappings">Share Your Mappings</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-review-guidelines">Code Review Guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#for-reviewers">For Reviewers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#for-contributors">For Contributors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#security-contributions">Security Contributions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#reporting-security-issues">Reporting Security Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#id1">Security Contributions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#license">License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-of-conduct">Code of Conduct</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#questions">Questions?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#thank-you">Thank You!</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CHANGELOG.html">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id2">1.1.0 - 2025-11-06</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#added">Added</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#changed">Changed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id4">1.0.4 - 2025-06-15</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#id5">Added</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id7">1.0.3 - 2025-06-14</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#fixed">Fixed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id9">1.0.2 - 2025-06-14</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#id10">Fixed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id12">1.0.1 - 2025-06-14</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CHANGELOG.html#id13">Added</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html#id15">1.0.0 - 2025-06-14</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2980B9" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PadRelay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Security</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/security.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="security">
+<h1>Security<a class="headerlink" href="#security" title="Link to this heading"></a></h1>
+<p>This document covers security features, best practices, and considerations when using PadRelay.</p>
+<section id="security-model">
+<h2>Security Model<a class="headerlink" href="#security-model" title="Link to this heading"></a></h2>
+<p>PadRelay implements multiple security layers:</p>
+<ol class="arabic simple">
+<li><p><strong>Authentication:</strong> Verify client identity before accepting input</p></li>
+<li><p><strong>Encryption:</strong> Optional TLS/SSL for TCP connections</p></li>
+<li><p><strong>Rate Limiting:</strong> Prevent denial-of-service attacks</p></li>
+<li><p><strong>Input Validation:</strong> Sanitize all incoming data</p></li>
+<li><p><strong>Secure Storage:</strong> Hash passwords, sanitize logs</p></li>
+</ol>
+</section>
+<section id="threat-model">
+<h2>Threat Model<a class="headerlink" href="#threat-model" title="Link to this heading"></a></h2>
+<section id="assumptions">
+<h3>Assumptions<a class="headerlink" href="#assumptions" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Trusted Network:</strong> PadRelay is designed for use on private networks (home LAN, VPN)</p></li>
+<li><p><strong>Physical Security:</strong> Attacker does not have physical access to client or server</p></li>
+<li><p><strong>Software Integrity:</strong> PadRelay code has not been modified by attacker</p></li>
+</ul>
+</section>
+<section id="threats-addressed">
+<h3>Threats Addressed<a class="headerlink" href="#threats-addressed" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Unauthorized Access:</strong> Attackers cannot control virtual gamepad without password</p></li>
+<li><p><strong>Man-in-the-Middle (TCP/TLS):</strong> Encrypted connections prevent eavesdropping</p></li>
+<li><p><strong>Replay Attacks:</strong> Challenges and timestamps prevent message replay</p></li>
+<li><p><strong>Denial of Service:</strong> Rate limiting mitigates simple DoS attacks</p></li>
+<li><p><strong>Password Disclosure:</strong> Passwords are hashed before storage</p></li>
+<li><p><strong>Log Injection:</strong> Log sanitization prevents malicious log entries</p></li>
+</ol>
+</section>
+<section id="threats-not-addressed">
+<h3>Threats Not Addressed<a class="headerlink" href="#threats-not-addressed" title="Link to this heading"></a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>PadRelay is <strong>not designed</strong> to protect against:</p>
+<ul class="simple">
+<li><p><strong>Network Attackers (UDP):</strong> UDP mode has no encryption</p></li>
+<li><p><strong>Advanced DoS:</strong> Sophisticated distributed attacks may bypass rate limits</p></li>
+<li><p><strong>Malware:</strong> If client or server is compromised, attacker has full control</p></li>
+<li><p><strong>Traffic Analysis:</strong> Even with TLS, traffic patterns may reveal information</p></li>
+<li><p><strong>Public Internet:</strong> Never expose PadRelay directly to the internet</p></li>
+</ul>
+</div>
+</section>
+</section>
+<section id="authentication">
+<h2>Authentication<a class="headerlink" href="#authentication" title="Link to this heading"></a></h2>
+<section id="password-based-authentication">
+<h3>Password-Based Authentication<a class="headerlink" href="#password-based-authentication" title="Link to this heading"></a></h3>
+<p>PadRelay uses password-based authentication with different mechanisms for TCP and UDP.</p>
+<section id="password-hashing">
+<h4>Password Hashing<a class="headerlink" href="#password-hashing" title="Link to this heading"></a></h4>
+<p>Passwords are hashed using <strong>PBKDF2-HMAC-SHA256</strong>:</p>
+<ul class="simple">
+<li><p><strong>Algorithm:</strong> PBKDF2 (Password-Based Key Derivation Function 2)</p></li>
+<li><p><strong>Hash Function:</strong> HMAC-SHA256</p></li>
+<li><p><strong>Iterations:</strong> 100,000 (configurable, default)</p></li>
+<li><p><strong>Salt:</strong> 16 bytes (128 bits) of random data</p></li>
+<li><p><strong>Output:</strong> 32 bytes (256 bits)</p></li>
+</ul>
+<p><strong>Storage Format:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pbkdf2_sha256$iterations$salt_hex$hash_hex
+</pre></div>
+</div>
+<p><strong>Example:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pbkdf2_sha256$100000$abc123def456...$deadbeef1234...
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tcp-challenge-response">
+<h3>TCP Challenge-Response<a class="headerlink" href="#tcp-challenge-response" title="Link to this heading"></a></h3>
+<p>TCP connections use a challenge-response protocol:</p>
+<ol class="arabic simple">
+<li><p><strong>Challenge Generation:</strong> Server generates 32 bytes of random data</p></li>
+<li><p><strong>Parameter Exchange:</strong> Server sends challenge, salt, and iteration count</p></li>
+<li><p><strong>Key Derivation:</strong> Client derives key using PBKDF2 with server parameters</p></li>
+<li><p><strong>Response Computation:</strong> Client computes HMAC-SHA256(key, challenge)</p></li>
+<li><p><strong>Verification:</strong> Server compares response with expected value</p></li>
+<li><p><strong>Access Decision:</strong> Match grants access, mismatch denies access</p></li>
+</ol>
+<p><strong>Security Properties:</strong></p>
+<ul class="simple">
+<li><p><strong>No Password Transmission:</strong> Password never sent over network</p></li>
+<li><p><strong>Single-Use Challenge:</strong> Each challenge used only once</p></li>
+<li><p><strong>Brute-Force Resistance:</strong> PBKDF2 iterations slow down attacks</p></li>
+<li><p><strong>No Replay:</strong> Challenge-response cannot be replayed</p></li>
+</ul>
+</section>
+<section id="udp-token-authentication">
+<h3>UDP Token Authentication<a class="headerlink" href="#udp-token-authentication" title="Link to this heading"></a></h3>
+<p>UDP messages include time-based authentication tokens:</p>
+<ol class="arabic">
+<li><p><strong>Key Derivation:</strong> Client derives key using PBKDF2 (once)</p></li>
+<li><p><strong>Token Computation:</strong> For each message:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">token</span> <span class="o">=</span> <span class="n">HMAC</span><span class="o">-</span><span class="n">SHA256</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">message_json</span> <span class="o">+</span> <span class="n">timestamp</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Token Validation:</strong> Server recomputes token and compares</p></li>
+<li><p><strong>Timestamp Check:</strong> Server verifies timestamp is recent (≤60 seconds old)</p></li>
+</ol>
+<p><strong>Security Properties:</strong></p>
+<ul class="simple">
+<li><p><strong>Per-Message Authentication:</strong> Each message independently verified</p></li>
+<li><p><strong>Replay Protection:</strong> Timestamps prevent replay after 60-second window</p></li>
+<li><p><strong>No Password Transmission:</strong> Password never sent over network</p></li>
+</ul>
+<p><strong>Limitations:</strong></p>
+<ul class="simple">
+<li><p><strong>Clock Synchronization:</strong> Client and server clocks must be within 60 seconds</p></li>
+<li><p><strong>No Encryption:</strong> UDP does not support TLS</p></li>
+</ul>
+</section>
+</section>
+<section id="encryption">
+<h2>Encryption<a class="headerlink" href="#encryption" title="Link to this heading"></a></h2>
+<section id="tls-ssl-support">
+<h3>TLS/SSL Support<a class="headerlink" href="#tls-ssl-support" title="Link to this heading"></a></h3>
+<p>PadRelay supports TLS/SSL encryption for TCP connections:</p>
+<ul class="simple">
+<li><p><strong>Enabled by Default:</strong> TCP connections use TLS by default (v1.1.0+)</p></li>
+<li><p><strong>Minimum Version:</strong> TLS 1.2</p></li>
+<li><p><strong>Recommended Version:</strong> TLS 1.3</p></li>
+<li><p><strong>Cipher Suites:</strong> Modern, secure ciphers (ECDHE, AES-GCM, ChaCha20)</p></li>
+</ul>
+</section>
+<section id="certificate-management">
+<h3>Certificate Management<a class="headerlink" href="#certificate-management" title="Link to this heading"></a></h3>
+<section id="self-signed-certificates">
+<h4>Self-Signed Certificates<a class="headerlink" href="#self-signed-certificates" title="Link to this heading"></a></h4>
+<p>PadRelay automatically generates self-signed certificates:</p>
+<ul class="simple">
+<li><p><strong>Location:</strong> <code class="docutils literal notranslate"><span class="pre">~/.padrelay/certs/</span></code> (Linux/Mac) or <code class="docutils literal notranslate"><span class="pre">%USERPROFILE%\.padrelay\certs\</span></code> (Windows)</p></li>
+<li><p><strong>Files:</strong> <code class="docutils literal notranslate"><span class="pre">server.crt</span></code> (certificate) and <code class="docutils literal notranslate"><span class="pre">server.key</span></code> (private key)</p></li>
+<li><p><strong>Algorithm:</strong> RSA 2048-bit</p></li>
+<li><p><strong>Validity:</strong> 365 days</p></li>
+<li><p><strong>Subject:</strong> CN=localhost</p></li>
+</ul>
+<p><strong>Security Note:</strong> Self-signed certificates provide encryption but not identity verification. They protect against passive eavesdropping but not active man-in-the-middle attacks.</p>
+</section>
+<section id="custom-certificates">
+<h4>Custom Certificates<a class="headerlink" href="#custom-certificates" title="Link to this heading"></a></h4>
+<p>For better security, use certificates from a trusted CA:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>padrelay-server<span class="w"> </span>--cert-path<span class="w"> </span>/path/to/cert.pem<span class="w"> </span>--key-path<span class="w"> </span>/path/to/key.pem
+</pre></div>
+</div>
+<p>Or configure in INI file:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[server]</span>
+<span class="na">cert_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/path/to/cert.pem</span>
+<span class="na">key_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/path/to/key.pem</span>
+</pre></div>
+</div>
+</section>
+<section id="certificate-expiration">
+<h4>Certificate Expiration<a class="headerlink" href="#certificate-expiration" title="Link to this heading"></a></h4>
+<p>PadRelay warns when certificates will expire within 30 days:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>WARNING: TLS certificate expires in 15 days. Please renew certificate.
+</pre></div>
+</div>
+<p>To renew, delete old certificates and restart server to generate new ones:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>rm<span class="w"> </span>~/.padrelay/certs/server.*
+padrelay-server<span class="w"> </span>--config<span class="w"> </span>server_config.ini
+</pre></div>
+</div>
+</section>
+</section>
+<section id="disabling-tls">
+<h3>Disabling TLS<a class="headerlink" href="#disabling-tls" title="Link to this heading"></a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Disabling TLS is <strong>not recommended</strong>. Only disable on trusted networks.</p>
+</div>
+<p>To disable TLS:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>padrelay-server<span class="w"> </span>--disable-tls
+padrelay-client<span class="w"> </span>--disable-tls
+</pre></div>
+</div>
+<p>When to disable TLS:</p>
+<ul class="simple">
+<li><p>Testing on localhost</p></li>
+<li><p>Already using VPN or SSH tunnel</p></li>
+<li><p>Network device doesn’t support TLS</p></li>
+</ul>
+</section>
+</section>
+<section id="rate-limiting">
+<h2>Rate Limiting<a class="headerlink" href="#rate-limiting" title="Link to this heading"></a></h2>
+<section id="purpose">
+<h3>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h3>
+<p>Rate limiting prevents clients from overwhelming the server with requests:</p>
+<ul class="simple">
+<li><p><strong>Denial of Service:</strong> Limits impact of malicious clients</p></li>
+<li><p><strong>Resource Protection:</strong> Prevents server resource exhaustion</p></li>
+<li><p><strong>Fair Usage:</strong> Ensures all clients get fair access</p></li>
+</ul>
+</section>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h3>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[server]</span>
+<span class="na">rate_limit_window</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">60</span><span class="w">        </span><span class="c1"># Time window in seconds</span>
+<span class="na">max_requests</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">100</span><span class="w">            </span><span class="c1"># Max requests per window (TCP)</span>
+<span class="na">max_requests</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">6000</span><span class="w">           </span><span class="c1"># Max requests per window (UDP)</span>
+<span class="na">block_duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">2</span><span class="w">            </span><span class="c1"># Block duration in seconds</span>
+</pre></div>
+</div>
+</section>
+<section id="algorithm">
+<h3>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading"></a></h3>
+<p>PadRelay uses a sliding window rate limiter:</p>
+<ol class="arabic simple">
+<li><p><strong>Track Requests:</strong> Count requests per client IP in time window</p></li>
+<li><p><strong>Check Limit:</strong> If count &gt; <code class="docutils literal notranslate"><span class="pre">max_requests</span></code>, block client</p></li>
+<li><p><strong>Block Client:</strong> Reject requests for <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> seconds</p></li>
+<li><p><strong>Reset:</strong> After block expires, client can try again</p></li>
+</ol>
+<p><strong>Example:</strong></p>
+<ul class="simple">
+<li><p>Window: 60 seconds</p></li>
+<li><p>Max requests: 100</p></li>
+<li><p>Client sends 150 requests in 60 seconds</p></li>
+<li><p>Server blocks client for 2 seconds</p></li>
+<li><p>Client must wait before reconnecting</p></li>
+</ul>
+</section>
+<section id="bypass">
+<h3>Bypass<a class="headerlink" href="#bypass" title="Link to this heading"></a></h3>
+<p>To disable rate limiting (not recommended):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[server]</span>
+<span class="na">max_requests</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">999999</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="input-validation">
+<h2>Input Validation<a class="headerlink" href="#input-validation" title="Link to this heading"></a></h2>
+<p>All input is validated before processing:</p>
+<section id="button-validation">
+<h3>Button Validation<a class="headerlink" href="#button-validation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Button indices must be non-negative integers</p></li>
+<li><p>Out-of-range buttons are logged and ignored</p></li>
+</ul>
+</section>
+<section id="axis-validation">
+<h3>Axis Validation<a class="headerlink" href="#axis-validation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Axis values must be floats between -1.0 and 1.0</p></li>
+<li><p>Out-of-range values are clamped to valid range</p></li>
+<li><p>Dead zones applied to prevent drift</p></li>
+</ul>
+</section>
+<section id="message-validation">
+<h3>Message Validation<a class="headerlink" href="#message-validation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Messages must be valid JSON</p></li>
+<li><p>Required fields must be present</p></li>
+<li><p>Protocol version must match</p></li>
+<li><p>Unknown fields are ignored (forward compatibility)</p></li>
+</ul>
+</section>
+</section>
+<section id="secure-coding-practices">
+<h2>Secure Coding Practices<a class="headerlink" href="#secure-coding-practices" title="Link to this heading"></a></h2>
+<section id="log-sanitization">
+<h3>Log Sanitization<a class="headerlink" href="#log-sanitization" title="Link to this heading"></a></h3>
+<p>Logs are sanitized to prevent log injection attacks:</p>
+<ul class="simple">
+<li><p>Newlines replaced with spaces</p></li>
+<li><p>Control characters removed</p></li>
+<li><p>Passwords and tokens never logged</p></li>
+<li><p>Sensitive data redacted</p></li>
+</ul>
+<p>Example sanitization:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Input: &quot;User\nINFO: Admin logged in&quot;</span>
+<span class="c1"># Output: &quot;User INFO: Admin logged in&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="file-permissions">
+<h3>File Permissions<a class="headerlink" href="#file-permissions" title="Link to this heading"></a></h3>
+<p>PadRelay checks configuration file permissions:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>WARNING: Configuration file is world-readable!
+Consider setting permissions to 600: chmod 600 config.ini
+</pre></div>
+</div>
+<p>Recommended permissions:</p>
+<ul class="simple">
+<li><p>Configuration files: <code class="docutils literal notranslate"><span class="pre">600</span></code> (owner read/write only)</p></li>
+<li><p>Log directory: <code class="docutils literal notranslate"><span class="pre">700</span></code> (owner read/write/execute only)</p></li>
+<li><p>Certificate files: <code class="docutils literal notranslate"><span class="pre">600</span></code> (owner read/write only)</p></li>
+</ul>
+</section>
+<section id="secrets-management">
+<h3>Secrets Management<a class="headerlink" href="#secrets-management" title="Link to this heading"></a></h3>
+<p>Best practices for managing secrets:</p>
+<ol class="arabic simple">
+<li><p><strong>Environment Variables:</strong> Use <code class="docutils literal notranslate"><span class="pre">PASSWORD</span></code> or <code class="docutils literal notranslate"><span class="pre">PASSWORD_HASH</span></code> env vars</p></li>
+<li><p><strong>Pre-Hashed Passwords:</strong> Hash passwords before storing in config</p></li>
+<li><p><strong>Secure Storage:</strong> Store config files with restricted permissions</p></li>
+<li><p><strong>No Version Control:</strong> Never commit passwords to git</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Environment variable</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PASSWORD</span><span class="o">=</span><span class="s2">&quot;my_secure_password&quot;</span>
+padrelay-server<span class="w"> </span>--config<span class="w"> </span>server_config.ini
+
+<span class="c1"># Better: Pre-hashed password</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PASSWORD_HASH</span><span class="o">=</span><span class="s2">&quot;pbkdf2_sha256</span><span class="nv">$100000$abc</span><span class="s2">...</span><span class="nv">$def</span><span class="s2">...&quot;</span>
+padrelay-server<span class="w"> </span>--config<span class="w"> </span>server_config.ini
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<section id="network-security">
+<h3>Network Security<a class="headerlink" href="#network-security" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Use VPN:</strong> Run PadRelay over VPN (WireGuard, OpenVPN)</p></li>
+<li><p><strong>Private Networks:</strong> Use only on trusted private networks</p></li>
+<li><p><strong>Firewall:</strong> Configure firewall to allow only necessary connections</p></li>
+<li><p><strong>No Public Internet:</strong> Never expose server directly to internet</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Bind to private IP</span>
+<span class="nv">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">192</span>.168.1.100
+
+<span class="c1"># Bad: Bind to all interfaces on public internet</span>
+<span class="nv">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>.0.0.0<span class="w">  </span><span class="c1"># Only safe on private network or with firewall</span>
+</pre></div>
+</div>
+</section>
+<section id="password-security">
+<h3>Password Security<a class="headerlink" href="#password-security" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Strong Passwords:</strong> Use 12+ character passwords with mixed case, numbers, symbols</p></li>
+<li><p><strong>Unique Passwords:</strong> Don’t reuse passwords from other services</p></li>
+<li><p><strong>Password Managers:</strong> Use a password manager to generate and store passwords</p></li>
+<li><p><strong>Regular Rotation:</strong> Change passwords periodically</p></li>
+</ol>
+<p>PadRelay warns about weak passwords:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>WARNING: Password is weak!
+Recommendations:
+- Use at least 12 characters
+- Include uppercase and lowercase letters
+- Include numbers and symbols
+- Avoid common passwords
+</pre></div>
+</div>
+</section>
+<section id="certificate-security">
+<h3>Certificate Security<a class="headerlink" href="#certificate-security" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Use TLS:</strong> Enable TLS for all TCP connections</p></li>
+<li><p><strong>Custom Certificates:</strong> Use CA-signed certificates for production</p></li>
+<li><p><strong>Certificate Rotation:</strong> Renew certificates before expiration</p></li>
+<li><p><strong>Protect Private Keys:</strong> Secure private keys with <code class="docutils literal notranslate"><span class="pre">600</span></code> permissions</p></li>
+</ol>
+</section>
+<section id="operational-security">
+<h3>Operational Security<a class="headerlink" href="#operational-security" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Keep Updated:</strong> Update PadRelay to latest version for security patches</p></li>
+<li><p><strong>Monitor Logs:</strong> Review logs for suspicious activity</p></li>
+<li><p><strong>Debug Mode:</strong> Disable debug mode in production (<code class="docutils literal notranslate"><span class="pre">PADRELAY_DEBUG=0</span></code>)</p></li>
+<li><p><strong>Least Privilege:</strong> Run server with minimal necessary permissions</p></li>
+</ol>
+</section>
+<section id="debug-logging">
+<h3>Debug Logging<a class="headerlink" href="#debug-logging" title="Link to this heading"></a></h3>
+<p>Debug mode logs detailed information but should be disabled in production:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Development: Enable debug logging</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PADRELAY_DEBUG</span><span class="o">=</span><span class="m">1</span>
+padrelay-server<span class="w"> </span>--config<span class="w"> </span>server_config.ini
+
+<span class="c1"># Production: Disable debug logging</span>
+<span class="nb">unset</span><span class="w"> </span>PADRELAY_DEBUG
+padrelay-server<span class="w"> </span>--config<span class="w"> </span>server_config.ini
+</pre></div>
+</div>
+</section>
+</section>
+<section id="reporting-security-issues">
+<h2>Reporting Security Issues<a class="headerlink" href="#reporting-security-issues" title="Link to this heading"></a></h2>
+<p>If you discover a security vulnerability in PadRelay:</p>
+<ol class="arabic simple">
+<li><p><strong>Do not</strong> open a public GitHub issue</p></li>
+<li><p>Email the maintainer at: <a class="reference external" href="mailto:sshden&#37;&#52;&#48;duck&#46;com">sshden<span>&#64;</span>duck<span>&#46;</span>com</a></p></li>
+<li><p>Include:</p>
+<ul class="simple">
+<li><p>Description of vulnerability</p></li>
+<li><p>Steps to reproduce</p></li>
+<li><p>Potential impact</p></li>
+<li><p>Suggested fix (if available)</p></li>
+</ul>
+</li>
+</ol>
+<p>I aim to respond as quickly as possible, typically within a few days. Security reports are treated with high priority.</p>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="user_guide/tls_setup.html"><span class="doc">TLS/SSL Setup Guide</span></a> - TLS setup guide</p></li>
+<li><p><a class="reference internal" href="configuration.html"><span class="doc">Configuration Reference</span></a> - Configuration reference</p></li>
+<li><p><a class="reference internal" href="protocol.html"><span class="doc">Protocol Specification</span></a> - Protocol specification</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="architecture.html" class="btn btn-neutral float-left" title="Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="protocol.html" class="btn btn-neutral float-right" title="Protocol Specification" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, ssh-den.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
