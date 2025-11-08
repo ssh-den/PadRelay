@@ -173,20 +173,26 @@ Protocol Selection
 TCP vs UDP
 ~~~~~~~~~~
 
-**TCP (Default):**
+**TCP (Default)**
 
-* ✅ Reliable delivery
-* ✅ TLS encryption support
-* ✅ Automatic reconnection
-* ❌ Higher latency (~10-30ms)
-* ❌ More bandwidth overhead
+**Pros:**
+- Reliable data delivery  
+- Supports TLS encryption  
+- Automatically reconnects if the connection drops  
 
-**UDP:**
+**Cons:**
+- Higher latency (approximately 10–30 ms)  
+- Slightly more bandwidth overhead  
 
-* ✅ Lower latency (~1-5ms)
-* ✅ Less bandwidth overhead
-* ❌ No encryption (use VPN)
-* ❌ Unreliable delivery (rare packet loss)
+**UDP**
+
+**Pros:**
+- Lower latency (approximately 1–5 ms)  
+- Less bandwidth usage  
+
+**Cons:**
+- No built-in encryption (use VPN if needed)  
+- Occasional packet loss or unreliable delivery
 
 When to Use TCP
 ~~~~~~~~~~~~~~~

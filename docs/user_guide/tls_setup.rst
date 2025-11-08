@@ -358,38 +358,40 @@ Security Considerations
 -----------------------
 
 Self-Signed Certificates
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Advantages:**
 
-* ✅ Free and easy to generate
-* ✅ Provides encryption
-* ✅ No CA required
+* Free and easy to generate  
+* Provides encryption  
+* No certificate authority required  
 
 **Limitations:**
 
-* ❌ No identity verification
-* ❌ Vulnerable to active MITM if attacker can intercept initial connection
-* ❌ Certificate warnings in some tools
+* No identity verification  
+* Can be vulnerable to man-in-the-middle attacks if the first connection is intercepted  
+* May trigger certificate warnings in some tools  
 
-**Recommendation:** Acceptable for private networks where you trust the network path.
+**Recommendation:**  
+Suitable for private or controlled networks where the connection path is trusted.
 
 CA-Signed Certificates
 ~~~~~~~~~~~~~~~~~~~~~~
 
 **Advantages:**
 
-* ✅ Identity verification
-* ✅ Protection against MITM
-* ✅ Trusted by all clients
+* Verifies server identity  
+* Protects against man-in-the-middle attacks  
+* Trusted by most clients by default  
 
 **Limitations:**
 
-* ❌ Cost (unless using Let's Encrypt)
-* ❌ More complex setup
-* ❌ Requires domain name (usually)
+* May involve cost (unless using Let's Encrypt)  
+* More complex setup  
+* Typically requires a registered domain name  
 
-**Recommendation:** Use for production or when highest security is needed.
+**Recommendation:**  
+Use for production environments or when strong identity verification is required.
 
 Network Security
 ~~~~~~~~~~~~~~~~

@@ -405,19 +405,6 @@ Debug mode logs detailed information but should be disabled in production:
    unset PADRELAY_DEBUG
    padrelay-server --config server_config.ini
 
-Security Audit Report
----------------------
-
-PadRelay has undergone security review. See ``SECURITY_AUDIT_REPORT.md`` in the repository for details.
-
-**Version 1.1.0 Improvements:**
-
-* ✅ TLS/SSL encryption for TCP connections
-* ✅ Password strength validation and warnings
-* ✅ Log sanitization to prevent injection attacks
-* ✅ Configuration file permission warnings
-* ✅ 55 new security-focused tests
-
 Reporting Security Issues
 -------------------------
 
@@ -432,7 +419,7 @@ If you discover a security vulnerability in PadRelay:
    * Potential impact
    * Suggested fix (if available)
 
-You will receive a response within 48 hours. Security issues are handled with priority.
+I aim to respond as quickly as possible, typically within a few days. Security reports are treated with high priority.
 
 See Also
 --------
@@ -440,4 +427,3 @@ See Also
 * :doc:`user_guide/tls_setup` - TLS setup guide
 * :doc:`configuration` - Configuration reference
 * :doc:`protocol` - Protocol specification
-* `SECURITY_AUDIT_REPORT.md <https://github.com/ssh-den/PadRelay/blob/main/SECURITY_AUDIT_REPORT.md>`_ - Full security audit
