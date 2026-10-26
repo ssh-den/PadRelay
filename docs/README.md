@@ -38,7 +38,8 @@ The manual **Documentation** workflow builds committed sources on `main` and
 deploys [GitHub Pages](https://ssh-den.github.io/PadRelay/). Local edits and builds
 do not update the site. GitHub Pages must use GitHub Actions as its source.
 
-**Run Tests** runs on pushes, pull requests and manual dispatch.
+**Run Tests** runs through **Run workflow** in GitHub Actions or after a maintainer
+approves the current PR commit. Pushes and opening a PR do not trigger tests.
 **Build and Release** is manual against an existing `v*` tag; it publishes to
 PyPI before creating the GitHub release. See `.github/workflows/` for the actual
 triggers and permissions.

@@ -4,7 +4,8 @@ Development
 Setup
 -----
 
-Use Python **3.11 or newer**. CI checks Python 3.11 and 3.12.
+Use Python **3.11 or newer**. The ``Run Tests`` workflow checks Python
+3.11 and 3.12.
 From the repository root, create and activate a virtual environment named
 ``.venv``, then install the project and development tools:
 
@@ -35,6 +36,14 @@ and provision keys for encrypted input datagrams. See :doc:`architecture` and
 
 Checks and Tests
 ----------------
+
+In GitHub Actions, select ``Run Tests`` and click ``Run workflow`` to start the
+checks manually. For a PR, submitting an ``Approve`` review starts tests only
+when the reviewer has write, maintain or admin access and approved the current
+head commit. Tests check out that exact commit with read-only token permissions.
+New commits require a new approval; pushes and opening a PR do not start tests.
+GitHub may additionally require approval of workflow runs from forks according
+to the repository's Actions settings.
 
 Run the same checks as CI from the repository root:
 

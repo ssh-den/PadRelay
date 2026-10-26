@@ -80,8 +80,10 @@ python -m pip install -e ".[dev]"
 ```
 
 The [development guide](docs/development.rst) lists the checks and documentation
-build commands. CI checks Python 3.11 and 3.12 on pushes and pull requests.
-Documentation and package publishing remain separate manual workflows.
+build commands. **Run Tests** checks Python 3.11 and 3.12 when started manually
+through **Run workflow** or after a maintainer approves the current PR commit.
+Pushes and opening a PR do not trigger tests. Documentation and package publishing
+are manual workflows.
 
 PadRelay is licensed under the [MIT License](LICENSE). Report vulnerabilities
 privately through the [contribution guide](docs/contributing.rst).
