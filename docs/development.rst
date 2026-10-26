@@ -114,8 +114,10 @@ then create and push a ``v*`` tag. Publishing requires a manual run of
 The tag must match the package version (``v2.0.0`` for ``2.0.0``), with a dated
 changelog entry. The workflow checks both before building and validates the
 distribution metadata before upload.
-The workflow uploads to PyPI before creating the GitHub release and requires
-the ``PYPI_API_TOKEN`` repository secret. Published PyPI versions cannot be
-overwritten.
+The workflow uploads to PyPI using OIDC Trusted Publishing before creating the
+GitHub release. No PyPI API token or repository secret is required.
+
+See the `PyPI Trusted Publisher setup guide
+<https://docs.pypi.org/trusted-publishers/adding-a-publisher/>`_. Published PyPI versions cannot be overwritten.
 
 For pull request expectations and reporting bugs, see :doc:`contributing`.
