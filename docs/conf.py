@@ -3,63 +3,62 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
 import sys
-sys.path.insert(0, os.path.abspath('../src'))
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'PadRelay'
-copyright = '2025, ssh-den'
-author = 'ssh-den'
-release = '1.1.0'
-version = '1.1.0'
+project = "PadRelay"
+copyright = "2025, ssh-den"
+author = "ssh-den"
+release = "1.1.0"
+version = "1.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.githubpages',
-    'sphinx_rtd_theme',
-    'm2r2',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.githubpages",
+    "sphinx_rtd_theme",
+    "m2r2",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "README.md", "Thumbs.db", ".DS_Store"]
 
 # Support for Markdown files via m2r2
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"
 
 # Theme options
 html_theme_options = {
-    'canonical_url': '',
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'style_nav_header_background': '#2980B9',
+    "canonical_url": "",
+    "logo_only": False,
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": False,
+    "style_nav_header_background": "#2980B9",
     # Toc options
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }
 
 # -- Extension configuration -------------------------------------------------
@@ -82,17 +81,17 @@ napoleon_attr_annotations = True
 
 # Intersphinx configuration
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'pygame': ('https://www.pygame.org/docs/', None),
+    "python": ("https://docs.python.org/3", None),
+    "pygame": ("https://www.pygame.org/docs/", None),
 }
 
 # Autodoc configuration
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # Todo extension configuration
@@ -102,10 +101,7 @@ todo_include_todos = True
 html_static_path = []
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True
+pygments_style = "sphinx"

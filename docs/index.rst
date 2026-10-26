@@ -1,54 +1,22 @@
-PadRelay Documentation
-======================
+PadRelay
+========
 
-.. image:: https://img.shields.io/pypi/v/padrelay.svg
-   :target: https://pypi.org/project/padrelay/
-   :alt: PyPI Version
+PadRelay forwards physical gamepad input to a virtual Xbox 360 or DualShock 4
+device on a Windows server. The client captures state with pygame; the server
+uses vgamepad and ViGEmBus. Python 3.11+ is required.
 
-.. image:: https://img.shields.io/pypi/pyversions/padrelay.svg
-   :target: https://pypi.org/project/padrelay/
-   :alt: Python Versions
+TCP uses verified TLS by default. UDP v2 combines a verified TLS control
+connection with encrypted, replay-protected input datagrams. Both modes require
+credentials in the CLI and admit one client per server process. Start with
+:doc:`quickstart`; existing UDP installations must update both endpoints and
+configure certificate trust.
 
-.. image:: https://img.shields.io/github/license/ssh-den/PadRelay.svg
-   :target: https://github.com/ssh-den/PadRelay/blob/main/LICENSE
-   :alt: License
-
-**PadRelay** is a client-server application that forwards gamepad input from a local machine to a Windows PC where a virtual controller is created. The client captures input with pygame and the server emulates either an Xbox 360 or DualShock 4 gamepad using the vgamepad library.
-
-Key Features
-------------
-
-* **Cross-Platform Client**: Works with Python 3.6+ on any system with pygame
-* **Windows Server**: Uses ViGEmBus to create virtual Xbox 360 or DualShock 4 gamepads
-* **Flexible Transport**: Choose between TCP (reliable) or UDP (low latency)
-* **Secure Authentication**: Challenge/response for TCP and token authentication for UDP
-* **TLS/SSL Support**: Optional encryption for TCP connections
-* **Rate Limiting**: Protects servers from excessive requests
-* **Automatic Reconnection**: Client automatically reconnects if server disconnects
-* **Controller Mapping**: Built-in key mapper utility for custom controller layouts
-* **Comprehensive Logging**: Detailed debug logging with log sanitization
-
-Use Cases
----------
-
-* Stream gamepad input from Linux/Mac to Windows gaming PC
-* Remote gaming over local network or VPN
-* Use non-standard controllers with games expecting Xbox/PS4 controllers
-* Share a single physical controller with multiple machines
-
-Quick Links
------------
-
-* `GitHub Repository <https://github.com/ssh-den/PadRelay>`_
-* `PyPI Package <https://pypi.org/project/padrelay/>`_
-* `Issue Tracker <https://github.com/ssh-den/PadRelay/issues>`_
-
-Documentation Contents
-----------------------
+These pages describe the current repository. See :doc:`CHANGELOG` for changes
+that have not yet been released.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started
+   :caption: Setup
 
    installation
    quickstart
@@ -56,7 +24,7 @@ Documentation Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
+   :caption: Operation
 
    user_guide/client
    user_guide/server
@@ -66,7 +34,7 @@ Documentation Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Technical Documentation
+   :caption: Internals
 
    architecture
    security
@@ -81,9 +49,6 @@ Documentation Contents
    contributing
    CHANGELOG
 
-Indices and tables
-==================
-
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
+* `Source and issues <https://github.com/ssh-den/PadRelay>`_

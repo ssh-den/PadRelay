@@ -1,198 +1,44 @@
-# PadRelay Documentation
+# Documentation
 
-This directory contains the complete documentation for PadRelay, built with Sphinx and published to GitHub Pages.
+Sphinx builds the `.rst` guides and the API reference. Read the
+[development guide](development.rst) for the contributor setup and checks.
 
-## Building the Documentation
+## Build
 
-### Prerequisites
+From the repository root, with PadRelay installed in the active environment:
 
-Install the required dependencies:
-
-```bash
-pip install -r requirements.txt
+```sh
+python -m pip install -r docs/requirements.txt
+python -m sphinx -b html docs docs/_build/html
 ```
 
-### Build HTML Documentation
+Open `docs/_build/html/index.html`. For a strict build, add `-W --keep-going`.
+New pages need an entry in a toctree. API signatures and docstrings come from
+source through autodoc; CLI tables, examples and behavioral descriptions are
+maintained manually.
 
-```bash
-cd docs
-make html
-```
+## Page Ownership
 
-The generated documentation will be in `_build/html/`. Open `_build/html/index.html` in your browser.
+- `quickstart.rst`: one complete first connection and the UDP migration steps.
+- `configuration.rst`: settings, defaults, precedence and mapping semantics.
+- `user_guide/tls_setup.rst`: trust distribution, identity files and renewal.
+- `user_guide/client.rst`, `server.rst`, `key_mapper.rst`: operation-specific details.
+- `user_guide/troubleshooting.rst`: diagnosis by symptom.
+- `protocol.rst`: byte encodings, message shapes and timing.
+- `security.rst`: protection and resource boundaries.
+- `architecture.rst`, `api.rst`: code organization and Python interfaces.
+- `development.rst`, `contributing.rst`: local work and submitting changes.
 
-### Build PDF Documentation
+Link to the owning page rather than copying its option tables or setup steps.
+The root `CONFIGURATION.md` and `KEY_MAPPER.md` point to those same guides.
 
-```bash
-cd docs
-make latexpdf
-```
+## Publish
 
-Requires LaTeX installation.
+The manual **Documentation** workflow builds committed sources on `main` and
+deploys [GitHub Pages](https://ssh-den.github.io/PadRelay/). Local edits and builds
+do not update the site. GitHub Pages must use GitHub Actions as its source.
 
-### Other Formats
-
-```bash
-make epub    # ePub format
-make text    # Plain text
-make man     # Man pages
-```
-
-## Documentation Structure
-
-```
-docs/
-├── index.rst                  # Main documentation index
-├── installation.rst           # Installation guide
-├── quickstart.rst             # Quick start guide
-├── configuration.rst          # Configuration reference
-├── architecture.rst           # System architecture
-├── security.rst               # Security documentation
-├── protocol.rst               # Protocol specification
-├── api.rst                    # API reference
-├── development.rst            # Development guide
-├── contributing.rst           # Contributing guidelines
-├── changelog.rst              # Changelog
-├── user_guide/                # User guides
-│   ├── client.rst            # Client guide
-│   ├── server.rst            # Server guide
-│   ├── key_mapper.rst        # Key mapper guide
-│   ├── tls_setup.rst         # TLS setup guide
-│   └── troubleshooting.rst   # Troubleshooting guide
-├── conf.py                    # Sphinx configuration
-├── requirements.txt           # Documentation dependencies
-├── Makefile                   # Unix build script
-└── make.bat                   # Windows build script
-```
-
-## Online Documentation
-
-Documentation URLs:
-
-* **ReadTheDocs:** https://padrelay.readthedocs.io
-* **GitHub Pages:** https://ssh-den.github.io/PadRelay
-
-## Continuous Integration
-
-All GitHub Actions workflows run manually. To publish documentation:
-
-1. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source.
-2. Open **Actions → Documentation → Run workflow** and select `main`.
-
-The documentation workflow:
-
-1. Builds HTML documentation with Sphinx
-2. Checks for broken links
-3. Uploads build artifacts
-4. Deploys to GitHub Pages (manual run on `main`)
-
-**Run Tests** is also manual. To publish a package, run **Build and Release** against an existing `v*` tag; it uploads to PyPI and creates a GitHub release.
-
-See `.github/workflows/docs.yml` for the workflow configuration.
-
-## Writing Documentation
-
-### reStructuredText Format
-
-Documentation uses reStructuredText (reST) format. Key syntax:
-
-**Headers:**
-```rst
-Title
-=====
-
-Section
--------
-
-Subsection
-~~~~~~~~~~
-```
-
-**Code Blocks:**
-```rst
-.. code-block:: python
-
-   def hello():
-       print("Hello, World!")
-```
-
-**Links:**
-```rst
-:doc:`installation`  # Internal link
-`External Link <https://example.com>`_
-```
-
-**Admonitions:**
-```rst
-.. note::
-   This is a note
-
-.. warning::
-   This is a warning
-
-.. important::
-   This is important
-```
-
-### Adding New Pages
-
-1. Create a new `.rst` file in the appropriate directory
-2. Add it to the `toctree` in `index.rst` or the relevant parent document
-3. Build and verify the documentation
-
-### API Documentation
-
-API documentation is automatically generated from docstrings using Sphinx's autodoc extension. Write docstrings in Google style:
-
-```python
-def function(arg1: str, arg2: int) -> bool:
-    """Brief description.
-
-    Longer description with more details.
-
-    Args:
-        arg1: Description of arg1
-        arg2: Description of arg2
-
-    Returns:
-        Description of return value
-
-    Raises:
-        ValueError: When something is wrong
-    """
-    pass
-```
-
-## Troubleshooting
-
-### Build Errors
-
-**"sphinx-build: command not found"**
-
-Install Sphinx:
-```bash
-pip install sphinx
-```
-
-**Import errors during autodoc**
-
-Ensure the project is installed:
-```bash
-pip install -e ..
-```
-
-**"vgamepad not found" on Linux/macOS**
-
-vgamepad is Windows-only. Autodoc will skip it automatically, but you may see warnings.
-
-### Link Check Failures
-
-Some external links may be temporarily unavailable. Review `_build/linkcheck/output.txt` for details.
-
-## Contributing
-
-See `contributing.rst` for guidelines on contributing to the documentation.
-
-## License
-
-The documentation is licensed under the MIT License, same as the project.
+**Run Tests** runs on pushes, pull requests and manual dispatch.
+**Build and Release** is manual against an existing `v*` tag; it publishes to
+PyPI before creating the GitHub release. See `.github/workflows/` for the actual
+triggers and permissions.

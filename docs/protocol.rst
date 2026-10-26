@@ -1,577 +1,160 @@
-Protocol Specification
-======================
+Protocol
+========
 
-This document describes the PadRelay network protocol in detail.
+The JSON/control version is ``1.0``. UDP uses envelope version ``2`` with magic
+``PRU2``. There is no version negotiation or fallback to legacy UDP tokens.
 
-Protocol Overview
------------------
+TCP Framing
+-----------
 
-PadRelay uses a JSON-based protocol for communication between clients and servers. The protocol supports both TCP and UDP transports with different authentication mechanisms.
+Each message is a UTF-8 JSON object preceded by its payload length as an unsigned
+four-byte big-endian integer. The receiver rejects payloads larger than
+**4096 bytes**; the prefix is not part of that limit. TLS wraps this stream by
+default in the CLI.
 
-Protocol Version
-~~~~~~~~~~~~~~~~
+UDP mode opens a verified TLS control connection to the same numeric TCP port
+as the UDP data port. Authentication and heartbeat use TCP framing in both modes.
 
-Current version: **1.0**
-
-The protocol version is included in every message and checked during connection establishment.
-
-Transport Layers
-----------------
-
-TCP Transport
-~~~~~~~~~~~~~
-
-**Characteristics:**
-
-* Reliable, ordered delivery
-* Connection-oriented
-* Supports TLS/SSL encryption
-* Challenge-response authentication
-* Heartbeat mechanism for keep-alive
-
-**Use Cases:**
-
-* Secure connections over untrusted networks
-* When reliability is more important than latency
-* Initial setup and testing
-
-UDP Transport
-~~~~~~~~~~~~~
-
-**Characteristics:**
-
-* Unreliable, unordered delivery
-* Connectionless
-* No TLS support (use VPN for security)
-* Token-based authentication per message
-* Lower latency than TCP
-
-**Use Cases:**
-
-* Gaming with low latency requirements
-* Trusted local networks
-* High-frequency input updates
-
-Message Format
+Authentication
 --------------
 
-Base Message Structure
-~~~~~~~~~~~~~~~~~~~~~~
-
-All messages share a common base structure:
-
-.. code-block:: json
-
-   {
-     "type": "message_type",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456"
-   }
-
-**Fields:**
-
-* ``type`` (string): Message type identifier
-* ``protocol_version`` (string): Protocol version (currently "1.0")
-* ``timestamp`` (string): ISO 8601 timestamp when message was created
-
-Message Types
--------------
-
-Input Message
-~~~~~~~~~~~~~
-
-Transmits gamepad state from client to server.
-
-**Type:** ``input``
-
-**Direction:** Client → Server
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "input",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "buttons": [0, 1, 4, 7],
-     "axes": [0.0, -0.5, 0.8, 0.0],
-     "hats": [[0, 1]],
-     "triggers": {
-       "left": 0.0,
-       "right": 0.7
-     },
-     "token": "hmac_token_hex"
-   }
-
-**Fields:**
-
-* ``buttons`` (array of integers): Indices of currently pressed buttons
-* ``axes`` (array of floats): Axis positions, range -1.0 to 1.0
-* ``hats`` (array of [x, y] pairs): D-pad positions, each -1, 0, or 1
-* ``triggers`` (object, optional): Left and right trigger values, 0.0 to 1.0
-* ``token`` (string, UDP only): HMAC authentication token
-
-Authentication Messages
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Challenge Message
-^^^^^^^^^^^^^^^^^
-
-Server initiates authentication by sending a challenge.
-
-**Type:** ``auth_challenge``
-
-**Direction:** Server → Client (TCP only)
-
-**Format:**
+After the TLS handshake, the server reserves a connection slot and sends:
 
 .. code-block:: json
 
    {
      "type": "auth_challenge",
      "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "challenge": "deadbeef1234567890abcdef",
-     "salt": "abc123def456",
+     "challenge": "0123456789abcdef0123456789abcdef",
+     "salt": "0123456789abcdef0123456789abcdef",
      "iterations": 100000
    }
 
-**Fields:**
+The challenge contains 16 random bytes encoded as 32 hex characters. The client
+checks the protocol version and PBKDF2 bounds before deriving a key. These are
+the actual byte encodings used by the implementation:
 
-* ``challenge`` (string): Random hex-encoded bytes for HMAC computation
-* ``salt`` (string): Salt for password hashing
-* ``iterations`` (integer): PBKDF2 iteration count
+.. code-block:: python
 
-Response Message
-^^^^^^^^^^^^^^^^
+   digest_hex = hashlib.pbkdf2_hmac(
+       "sha256", password.encode(), salt.encode(), iterations
+   ).hex()
+   response = hmac.new(
+       digest_hex.encode(), challenge.encode(), hashlib.sha256
+   ).hexdigest()
 
-Client responds to challenge with computed HMAC.
-
-**Type:** ``auth_response``
-
-**Direction:** Client → Server (TCP only)
-
-**Format:**
+The salt and challenge are encoded as text, not decoded from hex. A client
+configured with a stored hash uses its digest directly; it must have the same
+hash as the server. The response is:
 
 .. code-block:: json
 
-   {
-     "type": "auth_response",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "response": "hmac_hex_value"
-   }
+   {"type": "auth_response", "protocol_version": "1.0", "response": "<64 hex characters>"}
 
-**Fields:**
+The server compares the response with ``hmac.compare_digest`` and replies with
+``auth_success`` or ``auth_failed``, each with ``protocol_version: "1.0"``.
+Malformed or failed authentication closes the connection. An ``error`` reply
+may contain a human-readable ``message`` when admission is denied; it has no
+numeric error-code contract. CLI server mode requires a password.
 
-* ``response`` (string): HMAC-SHA256 of challenge using password-derived key
-
-Success Message
-^^^^^^^^^^^^^^^
-
-Server confirms successful authentication.
-
-**Type:** ``auth_success``
-
-**Direction:** Server → Client
-
-**Format:**
+For UDP, ``auth_success`` additionally contains:
 
 .. code-block:: json
 
    {
      "type": "auth_success",
      "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456"
+     "udp_session": {
+       "version": 2,
+       "session_id": "<32 hex characters>",
+       "key": "<64 hex characters>"
+     }
    }
 
-Failed Message
-^^^^^^^^^^^^^^
+The server generates a new random ID and AES-256-GCM key for each admitted
+control connection. This material is sent only inside TLS.
 
-Server rejects authentication.
+Input
+-----
 
-**Type:** ``auth_failed``
-
-**Direction:** Server → Client
-
-**Format:**
+The client sends the current state, not a list of button events:
 
 .. code-block:: json
 
    {
-     "type": "auth_failed",
+     "type": "input",
      "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "reason": "Invalid credentials"
+     "buttons": [true, false, true],
+     "axes": [0.0, -0.5, 0.8, 0.0],
+     "hats": [[0, 1]],
+     "triggers": [0.0, 0.7]
    }
 
-**Fields:**
-
-* ``reason`` (string, optional): Human-readable failure reason
-
-Parameters Request
-^^^^^^^^^^^^^^^^^^
-
-Client requests authentication parameters (UDP only).
-
-**Type:** ``auth_params_request``
-
-**Direction:** Client → Server (UDP only)
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "auth_params_request",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456"
-   }
-
-Parameters Response
-^^^^^^^^^^^^^^^^^^^
-
-Server provides authentication parameters (UDP only).
-
-**Type:** ``auth_params``
-
-**Direction:** Server → Client (UDP only)
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "auth_params",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "salt": "abc123def456",
-     "iterations": 100000
-   }
-
-**Fields:**
-
-* ``salt`` (string): Salt for password hashing
-* ``iterations`` (integer): PBKDF2 iteration count
-
-Heartbeat Messages
-~~~~~~~~~~~~~~~~~~
-
-Heartbeat
-^^^^^^^^^
-
-Client sends periodic heartbeats to maintain connection.
-
-**Type:** ``heartbeat``
-
-**Direction:** Client → Server (TCP only)
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "heartbeat",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456"
-   }
-
-Heartbeat Acknowledgment
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Server acknowledges heartbeat.
-
-**Type:** ``heartbeat_ack``
-
-**Direction:** Server → Client (TCP only)
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "heartbeat_ack",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456"
-   }
-
-Error Message
-~~~~~~~~~~~~~
-
-Reports errors to the peer.
-
-**Type:** ``error``
-
-**Direction:** Bidirectional
-
-**Format:**
-
-.. code-block:: json
-
-   {
-     "type": "error",
-     "protocol_version": "1.0",
-     "timestamp": "2025-01-06T10:30:00.123456",
-     "error": "Error description",
-     "code": 400
-   }
-
-**Fields:**
-
-* ``error`` (string): Human-readable error description
-* ``code`` (integer, optional): Error code
-
-Connection Flows
-----------------
-
-TCP Connection Flow
-~~~~~~~~~~~~~~~~~~~
-
-1. **TCP Handshake**
-
-   * Client initiates TCP connection to server
-   * Three-way handshake (SYN, SYN-ACK, ACK)
-
-2. **TLS Handshake** (if enabled)
-
-   * Client and server negotiate TLS parameters
-   * Server presents certificate
-   * Encrypted channel established
-
-3. **Authentication**
-
-   .. code-block:: text
-
-      Client                           Server
-        │                                │
-        │◄──── auth_challenge ───────────│
-        │                                │
-        │───── auth_response ───────────►│
-        │                                │
-        │◄──── auth_success ─────────────│
-        │                                │
-
-4. **Input Transmission**
-
-   * Client sends ``input`` messages at configured rate
-   * Client sends periodic ``heartbeat`` messages
-   * Server acknowledges with ``heartbeat_ack``
-
-5. **Disconnection**
-
-   * Either side closes TCP connection
-   * Clean shutdown with FIN packets
-
-UDP Connection Flow
-~~~~~~~~~~~~~~~~~~~
-
-1. **Parameter Negotiation** (optional)
-
-   .. code-block:: text
-
-      Client                           Server
-        │                                │
-        │─── auth_params_request ───────►│
-        │                                │
-        │◄──── auth_params ──────────────│
-        │                                │
-
-2. **Input Transmission with Authentication**
-
-   * Client computes authentication token for each message
-   * Client sends ``input`` messages with ``token`` field
-   * Server validates token and processes input
-   * No connection state maintained
-
-Authentication Details
-----------------------
-
-TCP Challenge-Response
-~~~~~~~~~~~~~~~~~~~~~~
-
-**Algorithm:**
-
-1. Server generates 32-byte random challenge
-2. Server sends challenge with password hash parameters (salt, iterations)
-3. Client derives key from password using PBKDF2-HMAC-SHA256:
-
-   .. code-block:: python
-
-      key = PBKDF2(password, salt, iterations, dkLen=32)
-
-4. Client computes HMAC-SHA256:
-
-   .. code-block:: python
-
-      response = HMAC-SHA256(key, challenge)
-
-5. Client sends response to server
-6. Server computes expected response and compares
-7. Server grants or denies access
-
-**Security Properties:**
-
-* Challenge is single-use (prevents replay)
-* Password never transmitted
-* Resistant to brute-force (PBKDF2 iterations)
-
-UDP Token Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Algorithm:**
-
-1. Client optionally requests auth parameters (salt, iterations)
-2. Client derives key from password using PBKDF2
-3. For each input message, client computes token:
-
-   .. code-block:: python
-
-      timestamp = current_time_seconds()
-      message_data = json_without_token
-      token = HMAC-SHA256(key, message_data + str(timestamp))
-
-4. Client includes token in message
-5. Server validates token using same computation
-6. Server checks timestamp is recent (within 60 seconds)
-
-**Security Properties:**
-
-* Each message is authenticated
-* Timestamp prevents replay attacks
-* Password never transmitted
-* Limited by 60-second window for clock skew
-
-Rate Limiting
--------------
-
-The server enforces rate limits to prevent abuse:
-
-**Configuration:**
-
-* ``rate_limit_window``: Time window in seconds (default: 60)
-* ``max_requests``: Maximum requests per window (TCP: 100, UDP: 6000)
-* ``block_duration``: Block time in seconds for violations (default: 2)
-
-**Mechanism:**
-
-1. Server tracks request count per client IP
-2. When count exceeds ``max_requests`` in ``rate_limit_window``:
-   * Client is blocked for ``block_duration`` seconds
-   * Subsequent requests are rejected
-3. After block expires, client can reconnect
-
-**Response:**
-
-* TCP: Connection closed with error message
-* UDP: Messages silently dropped
-
-Error Handling
---------------
-
-Protocol Errors
-~~~~~~~~~~~~~~~
-
-**Invalid JSON:**
-
-* TCP: Server sends ``error`` message and closes connection
-* UDP: Message silently dropped
-
-**Invalid Protocol Version:**
-
-* TCP: Server sends ``error`` message with ``"protocol_mismatch"`` and closes connection
-* UDP: Message silently dropped
-
-**Missing Required Fields:**
-
-* TCP: Server sends ``error`` message
-* UDP: Message silently dropped
-
-Connection Errors
-~~~~~~~~~~~~~~~~~
-
-**TCP:**
-
-* Connection timeout: Client retries with exponential backoff
-* Connection reset: Client attempts to reconnect
-* TLS errors: Connection failed, client logs error
-
-**UDP:**
-
-* Packet loss: No retransmission, client continues sending
-* Token validation failure: Server drops message, client continues
-
-Compatibility
--------------
-
-Version Negotiation
-~~~~~~~~~~~~~~~~~~~
-
-Currently, only version 1.0 is supported. Future versions may implement:
-
-* Version negotiation during handshake
-* Backward compatibility for older clients
-* Feature flags for optional capabilities
-
-Extensibility
-~~~~~~~~~~~~~
-
-The protocol is designed for future extensions:
-
-* New message types can be added without breaking existing clients
-* Unknown message types are logged and ignored
-* Optional fields can be added to existing messages
-* Clients check for fields before accessing
-
-Constants
----------
-
-.. code-block:: python
-
-   PROTOCOL_VERSION = "1.0"
-   DEFAULT_PORT = 9999
-   HEARTBEAT_INTERVAL = 5.0  # seconds
-   HEARTBEAT_TIMEOUT = 15.0  # seconds
-   UDP_TOKEN_TTL = 60  # seconds
-   DEFAULT_UPDATE_RATE = 60  # Hz
-
-Message Size Limits
-~~~~~~~~~~~~~~~~~~~
-
-* Maximum message size: 65,507 bytes (UDP) / unlimited (TCP)
-* Typical input message size: ~200 bytes
-* Maximum buttons: Limited by JSON encoding
-* Maximum axes: Limited by JSON encoding
-
-Performance Considerations
---------------------------
-
-Bandwidth Usage
-~~~~~~~~~~~~~~~
-
-**TCP:**
-
-* Per input message: ~300 bytes (with TLS overhead)
-* At 60 Hz: ~18 KB/s (~0.14 Mbps)
-* Heartbeat: ~150 bytes every 5 seconds
-
-**UDP:**
-
-* Per input message: ~250 bytes
-* At 60 Hz: ~15 KB/s (~0.12 Mbps)
-* No heartbeat
-
-Latency
-~~~~~~~
-
-* JSON parsing: <1ms
-* HMAC computation: <1ms
-* Network transmission: Varies (1-50ms typical)
-* Total one-way latency: 3-55ms typical
-
-See Also
---------
-
-* :doc:`architecture` - System architecture
-* :doc:`security` - Security design
-* :doc:`api` - API reference
+* ``buttons`` is a boolean array indexed by physical button number.
+* ``axes`` contains numbers in [-1, 1]; ``triggers`` contains numbers in [0, 1].
+* ``hats`` contains integer pairs with coordinates -1, 0 or 1. Hats are carried
+  and validated, but the current gamepad handler does not apply them to output.
+
+Absent arrays default to empty during validation. Send complete state arrays
+to avoid retaining previous output unintentionally. ``timestamp`` may be present
+but is not required or used for authentication. The TCP client omits it from
+most updates. Unknown fields have no defined effect.
+
+TCP carries this JSON directly after authentication. UDP encrypts it in the
+envelope below. Input is validated before gamepad processing; invalid input is
+discarded, not clamped. UDP also checks ``protocol_version`` on each input.
+TCP checks it during authentication, not in the input validator.
+
+UDP Envelope
+------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Bytes
+     - Field
+   * - 0–3
+     - ``PRU2``
+   * - 4–19
+     - Session ID, 16 raw bytes
+   * - 20–27
+     - Unsigned 64-bit big-endian sequence
+   * - 28 onward
+     - AES-256-GCM ciphertext followed by its 16-byte tag
+
+The complete 28-byte header is associated data. The nonce is the sequence
+encoded as a 12-byte big-endian integer. One client sends with each key;
+sequences start at zero and sending stops before ``2**32``. The full datagram
+must fit in **4096 bytes**, leaving at most 4052 bytes for the JSON plaintext.
+
+The server requires a live session bound to the control peer's IP. Source-port
+changes do not create a new identity. Replay state is a 64-bit bitmap updated
+only after AEAD verification. Duplicate packets and packets outside its window
+are rejected; older reordered input is not applied even if first seen.
+
+Sessions expire after 600 seconds and are revoked when control disconnects.
+The client reconnects to get a fresh key. The server does not answer UDP
+datagrams: legacy JSON, parameter requests, unknown sessions, expired sessions
+and forged packets are dropped without replies or per-packet error reporting.
+
+Heartbeat and Lifecycle
+-----------------------
+
+The client sends ``heartbeat`` over the TCP/TLS stream, starting after login,
+then at 30-second intervals. The server responds with ``heartbeat_ack`` and
+``protocol_version: "1.0"``. A heartbeat response has a five-second deadline;
+the server waits at most 35 seconds for its next stream message.
+
+TLS handshake and server authentication each have a five-second deadline.
+UDP clients additionally bound control connection establishment to ten seconds.
+After a connection failure the client normally retries after a fixed five
+seconds, until shutdown. There is no exponential backoff.
+
+The server defaults to one pending or authenticated client. Slot release and
+UDP session revocation occur on failure, timeout, cancellation and disconnect.
+An authenticated client's disconnect resets the virtual gamepad.
+
+Malformed TCP framing/JSON ends the read and closes the connection; the server
+does not promise a structured error reply for every invalid packet. Unknown
+post-authentication message types are ignored. For admission budgets and their
+configuration, see :doc:`security` and :doc:`configuration`.

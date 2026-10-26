@@ -1,202 +1,87 @@
 # PadRelay
 
-**PadRelay** forwards gamepad input from a local machine to a Windows PC where a virtual controller is created using the `vgamepad` library.  The client captures input with `pygame` and the server emulates either an Xbox 360 or DualShock 4 gamepad.
+Forward physical gamepad input to a virtual Xbox 360 or DualShock 4 controller
+on a Windows PC. The client reads input with pygame; the server uses vgamepad
+and ViGEmBus. Requires **Python 3.11+**.
 
-## Features
+| Mode | Input | Control and login | Firewall |
+| --- | --- | --- | --- |
+| TCP (default) | Ordered JSON stream over TLS | Same TLS stream | TCP port |
+| UDP v2 | AES-256-GCM datagrams with replay checks | Verified TLS on the same port number | TCP and UDP port |
 
-- Works with Python 3.6+ on any system (Linux, MacOS, Windows) with `pygame` for the client
-- Windows server with [ViGEmBus](https://github.com/ViGEm/ViGEmBus) installs a virtual gamepad
-- Supports TCP (reliable) or UDP (low latency) transport
-- Challenge/response authentication for TCP and token authentication for UDP
-- Heartbeat and rate limiting to keep connections healthy
-- Configurable block duration and higher defaults for UDP to avoid false limits
-- Automatic reconnection if the server disconnects
+One server process owns one virtual gamepad and admits one pending or
+authenticated client. UDP still requires a password and server certificate
+trust; legacy bearer tokens and unauthenticated UDP are rejected.
+See [Unreleased changes](CHANGELOG.md#unreleased) before upgrading older peers.
 
-## Installation
+## Install
 
-You can install PadRelay directly from [PyPI](https://pypi.org/project/padrelay/):
+In an activated Python environment:
 
-```bash
-pip install padrelay
+```sh
+python -m pip install padrelay
 ```
 
-This will install the padrelay-server and padrelay-client command-line tools globally in your PATH. It also provides a `padrelay-keymapper` utility for creating controller mappings.
+On the Windows server, install the server extra and the ViGEmBus driver:
 
-To run the server and client:
-
-```bash
-padrelay-server --config config/server_config.ini
-padrelay-client --config config/client_config.ini
-padrelay-keymapper --output my_config.ini
+```sh
+python -m pip install "padrelay[server]"
 ```
 
-See the [full documentation](https://padrelay.readthedocs.io) for detailed guides.
+See the [installation guide](https://ssh-den.github.io/PadRelay/installation.html)
+for source installs, drivers and environment checks. Current repository behavior
+may differ from an older published package; use compatible builds on both peers.
 
-#### From Source (Development Mode)
+## First Connection
 
-If you want to run the project directly from source (e.g. for development), clone the repository and install dependencies:
+1. Follow the [quick start](https://ssh-den.github.io/PadRelay/quickstart.html)
+   with separate server and client INI files. For remote clients, bind the server
+   to its LAN address or `0.0.0.0`; the built-in default is local-only.
+2. Start the server. Copy its public `server.crt` to the client through a trusted
+   channel; keep `server.key` on the server.
+3. Set the client's `ca_path` to that trusted copy. With the generated localhost
+   certificate reached through a LAN IP, set `server_hostname = localhost`.
+4. Run `padrelay-client --config client.ini` and check the virtual device in
+   Windows `joy.cpl`.
 
-```bash
-git clone https://github.com/ssh-den/PadRelay.git
-cd PadRelay
-pip install -r requirements.txt
-```
+The server's default identity lives in `~/.padrelay/certs/`. Both peers use the
+same password, or the client uses the server's exact encoded hash. Credential
+precedence and INI migration are in the [configuration reference](docs/configuration.rst).
 
-Then either run the scripts directly:
-
-```bash
-python scripts/server.py --config config/server_config.ini
-python scripts/client.py --config config/client_config.ini
-```
-
-Or install in editable mode to expose the CLI tools:
-
-```bash
-pip install -e .
-```
-
-When running the server on Windows install [vgamepad](https://pypi.org/project/vgamepad/) and
-[ViGEmBus](https://github.com/ViGEm/ViGEmBus) as well.
-
-## Configuration
-
-Example INI files live in the `config/` directory.  A trimmed server configuration looks like:
-For a detailed explanation of every setting see the [configuration documentation](https://padrelay.readthedocs.io/en/latest/configuration.html).
-
-```ini
-[server]
-host = 127.0.0.1
-port = 9999
-protocol = tcp
-password = your_secure_password
-rate_limit_window = 60
-max_requests = 100
-block_duration = 2
-```
-
-On first run the server will replace any plaintext `password` value with a
-PBKDF2 hash string so the file no longer contains the original secret.  Use the
-`PASSWORD` or `PASSWORD_HASH` environment variable to override the value without
-modifying the configuration file. When the password is stored as a hash the
-server automatically includes the hash parameters in its authentication
-challenge so clients using the original plaintext password continue to work.
-
-```ini
-[vgamepad]
-type = xbox360
-```
-
-and a matching client configuration:
-
-```ini
-[network]
-server_ip = 192.168.1.100
-server_port = 9999
-protocol = tcp
-password = your_secure_password
-
-[joystick]
-index = 0
-
-[client]
-update_rate = 60
-```
-
-## Usage
-
-If you installed the project with `pip install -e .` or from PyPI you can use
-the `padrelay-server` and `padrelay-client` commands. When running directly from
-source replace them with `python scripts/server.py` and
-`python scripts/client.py`.
-
-Start the server with your configuration:
-
-```bash
-padrelay-server --config config/server_config.ini
-```
-
-Then start the client and point it at the server:
-
-```bash
-padrelay-client --config config/client_config.ini
-```
-
-Both scripts accept command line flags (see `--help`) and load values from the configuration files if provided.
-The server also checks the `PASSWORD` or `PASSWORD_HASH` environment variables
-which override any configured value at runtime. Clients may specify a
-`--password-hash` argument, a `[network] password_hash` setting, or the
-`PASSWORD_HASH` environment variable when using UDP so the secret never needs to
-be stored in plaintext.
-
-When a client only has the plaintext password for UDP, it will automatically
-send an `auth_params_request` when connecting. Servers that store only a hashed
-password reply with their salt and iteration count so the client can derive the
-same key and authenticate using time‑based tokens. Servers using a plaintext
-password simply ignore the request and the client continues with the plaintext
-key.
-
-## Testing
-
-To run the unit tests:
-
-```bash
-pytest
-```
-
-## Logging
-
-All components write logs to a single file in the `logs` directory at the project
-root by default. The directory will be created automatically if it does not
-exist. Set the ``PADRELAY_LOG_DIR`` environment variable to override this
-location. Logs are rotated automatically and never include passwords or tokens.
+For UDP, change both peers to `protocol = udp`, allow both port protocols and
+set a suitable server packet budget, normally `max_requests = 6000` at 60 Hz.
+An explicit TCP value of 100 in a copied INI is not replaced automatically.
+Sessions reconnect after ten minutes with a new key. TLS cannot be disabled
+for UDP, even over a VPN.
 
 ## Documentation
 
-📚 **Comprehensive documentation is available at [https://padrelay.readthedocs.io](https://padrelay.readthedocs.io)**
+- [Client and server setup](https://ssh-den.github.io/PadRelay/quickstart.html)
+- [Certificate trust and renewal](docs/user_guide/tls_setup.rst)
+- [Controller mapping](docs/user_guide/key_mapper.rst)
+- [Troubleshooting](docs/user_guide/troubleshooting.rst)
+- [Security boundaries](docs/security.rst) and [wire protocol](docs/protocol.rst)
+- [Development](docs/development.rst) and [contributing](docs/contributing.rst)
 
-* [Installation Guide](https://padrelay.readthedocs.io/en/latest/installation.html)
-* [Quick Start](https://padrelay.readthedocs.io/en/latest/quickstart.html)
-* [Configuration Reference](https://padrelay.readthedocs.io/en/latest/configuration.html)
-* [TLS/SSL Setup](https://padrelay.readthedocs.io/en/latest/user_guide/tls_setup.html)
-* [Troubleshooting](https://padrelay.readthedocs.io/en/latest/user_guide/troubleshooting.html)
-* [API Reference](https://padrelay.readthedocs.io/en/latest/api.html)
+To configure a controller, run `padrelay-keymapper --output controller.ini` and
+merge its mapping sections into the **server** configuration. Hat-only D-pads
+are not currently applied to virtual output; see the mapping guide for limits.
 
-## Security
+Logs default to `~/.padrelay/logs/padrelay.log`. Set `PADRELAY_DEBUG=1` for
+diagnostics or `PADRELAY_LOG_DIR` to change the directory. The CLI has no
+`--version` flag; use `python -m pip show padrelay`.
 
-**Version 1.1.0+ includes TLS/SSL support!**
+## Development
 
-* TLS encryption is **enabled by default** for TCP connections
-* Automatic self-signed certificate generation
-* PBKDF2 password hashing for secure authentication
-* Rate limiting to prevent abuse
+From an activated `.venv` in a checkout:
 
-For best security:
-* Use TLS for all TCP connections (enabled by default)
-* Use strong passwords (12+ characters)
-* Run on trusted private networks or VPNs
-* Never expose the server directly to the public internet
+```sh
+python -m pip install -e ".[dev]"
+```
 
-See the [Security Documentation](https://padrelay.readthedocs.io/en/latest/security.html) for details.
+The [development guide](docs/development.rst) lists the checks and documentation
+build commands. CI checks Python 3.11 and 3.12 on pushes and pull requests.
+Documentation and package publishing remain separate manual workflows.
 
-Use this software **at your own risk**. The author assumes no responsibility for data loss, damage, or security issues resulting from its use.
-
-## Contributing
-
-Contributions are welcome! Please see the [Contributing Guide](https://padrelay.readthedocs.io/en/latest/contributing.html) for details.
-
-**Bug Reports:** Open an issue on GitHub with steps to reproduce.
-
-**Feature Requests:** Suggest improvements via GitHub issues.
-
-**Pull Requests:** Fork the repository, make changes, and submit a PR.
-
-## Links
-
-* **Documentation:** https://padrelay.readthedocs.io
-* **PyPI:** https://pypi.org/project/padrelay/
-* **GitHub:** https://github.com/ssh-den/PadRelay
-* **Issues:** https://github.com/ssh-den/PadRelay/issues
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
+PadRelay is licensed under the [MIT License](LICENSE). Report vulnerabilities
+privately through the [contribution guide](docs/contributing.rst).

@@ -1,52 +1,104 @@
 API Reference
 =============
 
-This page provides detailed API documentation for PadRelay's modules and classes. The documentation is automatically generated from source code docstrings.
+Signatures and docstrings below are generated from the current source. The CLI
+parses configuration and supplies defaults before constructing these objects;
+Python callers must do that themselves. In particular, TCP constructors default
+to ``enable_tls=False``: pass ``True`` explicitly for verified TLS. UDP
+constructors require a password and force TLS control.
 
-Client Module
--------------
+Applications embedding the client must initialize and clean up ``GamepadInput``
+and manage ``run()`` / ``shutdown()``. There is no public ``send_input`` method.
+For wire formats see :doc:`protocol`, not the message constructors alone.
 
-Client Application
-~~~~~~~~~~~~~~~~~~
+Examples
+--------
+
+Password challenge-response with a plaintext client and hashed server:
+
+.. code-block:: python
+
+   from padrelay.security.auth import Authenticator
+
+   server = Authenticator(Authenticator.hash_password("example-password"))
+   client = Authenticator("example-password")
+   client.set_parameters(server.salt, server.iterations)
+   challenge = server.generate_tcp_challenge()
+   response = client.generate_tcp_response(challenge)
+   assert server.verify_tcp_response(challenge, response)
+
+An input message uses booleans for buttons and a list for trigger values:
+
+.. code-block:: python
+
+   import json
+   from padrelay.protocol.messages import InputMessage, validate_input_message
+
+   message = InputMessage(
+       buttons=[True, False], axes=[0.0, -0.5],
+       hats=[(0, 1)], triggers=[0.0, 0.7],
+   )
+   assert validate_input_message(json.loads(message.to_json()))
+
+Admission and request budgets use ``ConnectionTracker``; there is no separate
+``RateLimiter`` class. Reservation and authentication counts are separate:
+
+.. code-block:: python
+
+   from padrelay.security.rate_limiting import ConnectionTracker
+
+   tracker = ConnectionTracker(max_connections=1, max_requests=2)
+   peer = ("192.0.2.1", 1234)
+   assert tracker.reserve(peer)
+   tracker.authenticate(peer)
+   assert tracker.active_connections == 1
+   assert not tracker.is_rate_limited(peer)
+   tracker.disconnect(peer)
+
+Use :doc:`user_guide/tls_setup` for certificate generation. Session parameters
+are secret and may be transmitted only inside authenticated TLS; creating a
+``UDPSession`` alone does not establish peer trust.
+
+Client
+------
+
+Application
+~~~~~~~~~~~
 
 .. automodule:: padrelay.client.client_app
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Input Handling
-~~~~~~~~~~~~~~
+Input
+~~~~~
 
 .. automodule:: padrelay.client.input
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Client Constants
-~~~~~~~~~~~~~~~~
+Constants
+~~~~~~~~~
 
 .. automodule:: padrelay.client.constants
    :members:
    :undoc-members:
 
-Server Module
--------------
+Server
+------
 
-Server Application
-~~~~~~~~~~~~~~~~~~
+Application
+~~~~~~~~~~~
 
 .. automodule:: padrelay.server.server_app
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Input Processor
-~~~~~~~~~~~~~~~
+Input Processing
+~~~~~~~~~~~~~~~~
 
 .. automodule:: padrelay.server.input_processor
    :members:
    :undoc-members:
-   :show-inheritance:
 
 Virtual Gamepad
 ~~~~~~~~~~~~~~~
@@ -54,33 +106,30 @@ Virtual Gamepad
 .. automodule:: padrelay.server.virtual_gamepad
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Server Constants
-~~~~~~~~~~~~~~~~
+Constants
+~~~~~~~~~
 
 .. automodule:: padrelay.server.constants
    :members:
    :undoc-members:
 
-Protocol Module
----------------
+Protocol
+--------
 
-TCP Protocol
-~~~~~~~~~~~~
+TCP
+~~~
 
 .. automodule:: padrelay.protocol.tcp
    :members:
    :undoc-members:
-   :show-inheritance:
 
-UDP Protocol
-~~~~~~~~~~~~
+UDP
+~~~
 
 .. automodule:: padrelay.protocol.udp
    :members:
    :undoc-members:
-   :show-inheritance:
 
 Messages
 ~~~~~~~~
@@ -88,18 +137,16 @@ Messages
 .. automodule:: padrelay.protocol.messages
    :members:
    :undoc-members:
-   :show-inheritance:
-   :exclude-members: from_dict
 
-Protocol Constants
-~~~~~~~~~~~~~~~~~~
+Constants
+~~~~~~~~~
 
 .. automodule:: padrelay.protocol.constants
    :members:
    :undoc-members:
 
-Security Module
----------------
+Security
+--------
 
 Authentication
 ~~~~~~~~~~~~~~
@@ -107,33 +154,37 @@ Authentication
 .. automodule:: padrelay.security.auth
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Rate Limiting
-~~~~~~~~~~~~~
+UDP Sessions
+~~~~~~~~~~~~
+
+.. automodule:: padrelay.security.udp_session
+   :members:
+   :undoc-members:
+
+Admission Limits
+~~~~~~~~~~~~~~~~
 
 .. automodule:: padrelay.security.rate_limiting
    :members:
    :undoc-members:
-   :show-inheritance:
 
-TLS Utilities
-~~~~~~~~~~~~~
+TLS
+~~~
 
 .. automodule:: padrelay.security.tls_utils
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Password Strength
+Password Warnings
 ~~~~~~~~~~~~~~~~~
 
 .. automodule:: padrelay.security.password_strength
    :members:
    :undoc-members:
 
-Core Module
------------
+Core
+----
 
 Configuration
 ~~~~~~~~~~~~~
@@ -148,29 +199,28 @@ Exceptions
 .. automodule:: padrelay.core.exceptions
    :members:
    :undoc-members:
-   :show-inheritance:
 
-Logging Utilities
-~~~~~~~~~~~~~~~~~
+Logging
+~~~~~~~
 
 .. automodule:: padrelay.core.logging_utils
    :members:
    :undoc-members:
 
-Scripts Module
---------------
+Entry Points
+------------
 
-Server Entry Point
-~~~~~~~~~~~~~~~~~~
+Client
+~~~~~~
 
-.. automodule:: padrelay.scripts.server
+.. automodule:: padrelay.scripts.client
    :members:
    :undoc-members:
 
-Client Entry Point
-~~~~~~~~~~~~~~~~~~
+Server
+~~~~~~
 
-.. automodule:: padrelay.scripts.client
+.. automodule:: padrelay.scripts.server
    :members:
    :undoc-members:
 
@@ -180,165 +230,3 @@ Key Mapper
 .. automodule:: padrelay.scripts.key_mapper
    :members:
    :undoc-members:
-
-Usage Examples
---------------
-
-Creating a Client Programmatically
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   import asyncio
-   from padrelay.client.client_app import VirtualGamepadClient
-   from padrelay.client.input import GamepadInput
-
-   async def main():
-       # Initialize gamepad
-       gamepad = GamepadInput(joystick_index=0)
-       if not gamepad.initialize():
-           print("Failed to initialize gamepad")
-           return
-
-       # Create client
-       client = VirtualGamepadClient(
-           server_ip="192.168.1.100",
-           server_port=9999,
-           protocol="tcp",
-           gamepad=gamepad,
-           update_rate=60,
-           password="my_password",
-           enable_tls=True
-       )
-
-       # Run client
-       await client.run()
-
-   if __name__ == "__main__":
-       asyncio.run(main())
-
-Creating a Server Programmatically
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   import asyncio
-   from padrelay.server.server_app import VirtualGamepadServer
-
-   async def main():
-       # Create server
-       server = VirtualGamepadServer(
-           host="0.0.0.0",
-           port=9999,
-           password="my_password",
-           gamepad_type="xbox360",
-           protocol="tcp",
-           enable_tls=True
-       )
-
-       # Run server
-       await server.run()
-
-   if __name__ == "__main__":
-       asyncio.run(main())
-
-Using the Authenticator
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from padrelay.security.auth import Authenticator
-
-   # Hash a password
-   password_hash = Authenticator.hash_password("my_password")
-   print(password_hash)
-   # Output: pbkdf2_sha256$100000$abc123...$def456...
-
-   # Create authenticator with plaintext password
-   auth1 = Authenticator(password="my_password")
-
-   # Create authenticator with hashed password
-   auth2 = Authenticator(password=password_hash)
-
-   # Generate challenge
-   challenge = auth1.generate_challenge()
-
-   # Compute response
-   response = auth2.compute_response(challenge, auth1.salt, auth1.iterations)
-
-   # Verify response
-   is_valid = auth1.verify_response(challenge, response)
-   print(is_valid)  # True
-
-Custom Message Creation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from padrelay.protocol.messages import InputMessage
-
-   # Create input message
-   msg = InputMessage(
-       buttons=[0, 1, 4],  # Buttons A, B, and LB pressed
-       axes=[0.0, -0.5, 0.8, 0.0],  # Left stick up, right stick right
-       hats=[[0, 0]],  # D-pad centered
-       triggers={"left": 0.0, "right": 0.7}  # Right trigger pressed
-   )
-
-   # Serialize to JSON
-   json_str = msg.to_json()
-
-   # Serialize to bytes
-   data = msg.to_bytes()
-
-Rate Limiting Example
-~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from padrelay.security.rate_limiting import RateLimiter
-
-   # Create rate limiter (100 requests per 60 seconds)
-   limiter = RateLimiter(
-       max_requests=100,
-       window_seconds=60,
-       block_duration=120
-   )
-
-   # Check if client is allowed
-   client_addr = "192.168.1.50"
-   if limiter.is_allowed(client_addr):
-       # Process request
-       pass
-   else:
-       # Reject request
-       print("Rate limit exceeded")
-
-TLS Certificate Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from pathlib import Path
-   from padrelay.security.tls_utils import generate_self_signed_cert
-
-   # Generate certificate
-   cert_path = Path("server.crt")
-   key_path = Path("server.key")
-
-   generate_self_signed_cert(
-       cert_path=cert_path,
-       key_path=key_path,
-       hostname="localhost",
-       days=365
-   )
-
-   print(f"Certificate created: {cert_path}")
-   print(f"Private key created: {key_path}")
-
-See Also
---------
-
-* :doc:`architecture` - System architecture overview
-* :doc:`protocol` - Protocol specification
-* :doc:`security` - Security implementation details

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## Unreleased
+
+### Changed
+- Minimum Python version is now 3.11.
+- UDP v2 replaces reusable tokens with TLS-authenticated sessions and
+  AES-256-GCM input datagrams. Update client and server together, configure
+  certificate trust, and allow TCP and UDP on the same port. Legacy UDP and
+  disabling TLS in UDP mode are no longer supported.
+- TCP clients verify certificate trust and server identity by default. TLS
+  setup errors stop startup instead of falling back to plaintext. Clients can
+  configure trust with `--ca-path` and `--server-hostname`.
+- Pending authentication and active clients share the connection limit.
+  IP/global budgets and bounded limiter storage replace per-port tracking.
+
+### Fixed
+- Reject excessive PBKDF2 parameters before hashing; derive client keys outside
+  the event loop without committing cancelled work.
+- Validate every input packet and JSON hat pairs, close failed client
+  connections, and create TLS identities without overwriting existing files.
+- Preserve CLI credentials during INI migration; never turn an empty INI
+  password into a valid hash credential.
+- Cancel pending client work on shutdown and bound graceful stream closure to
+  one second. Support client signal handling on Windows and propagate application
+  failures through CLI exit codes.
+- Invalidate cached gamepad input on disconnect and apply independent trigger
+  changes immediately.
+
 ## [1.1.0] - 2025-11-06
 
 ### Added

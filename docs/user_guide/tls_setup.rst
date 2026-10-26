@@ -1,462 +1,114 @@
-TLS/SSL Setup Guide
-===================
+TLS and Certificate Trust
+=========================
 
-This guide covers setting up TLS/SSL encryption for secure PadRelay connections.
+TCP enables TLS by default in the CLI. UDP v2 requires verified TLS control and
+uses the same certificate settings; allow both TCP and UDP on the server port.
+Certificate or TLS setup failures do not trigger a plaintext fallback.
 
-Overview
---------
+Default Self-Signed Identity
+----------------------------
 
-PadRelay supports TLS/SSL encryption for TCP connections to protect against eavesdropping and man-in-the-middle attacks.
+Start the server with a password and no custom certificate paths. It generates
+``server.crt`` and ``server.key`` in ``~/.padrelay/certs/``
+(``%USERPROFILE%\.padrelay\certs\`` on Windows) if both files are absent.
+The default certificate uses RSA-2048, lasts 365 days, and identifies
+``localhost`` and ``127.0.0.1`` through Subject Alternative Names.
 
-**Default Behavior:**
-
-* TLS is **enabled by default** for TCP connections (version 1.1.0+)
-* Self-signed certificates are automatically generated
-* UDP does not support TLS (use VPN instead)
-
-Quick Start
------------
-
-Using Auto-Generated Certificates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The simplest way to use TLS is with auto-generated self-signed certificates:
-
-**Server:**
+Copy **only the public certificate** to the client through a trusted channel.
+Never copy ``server.key``. Trust the local copy and use the identity in it:
 
 .. code-block:: bash
 
-   padrelay-server --config server_config.ini
-   # TLS enabled by default, certificates auto-generated
+   padrelay-client --config client.ini --server-ip 192.168.1.100 \
+     --ca-path /path/to/trusted-server.crt --server-hostname localhost
 
-**Client:**
+Here the destination is the LAN IP, while the certificate is checked against
+``localhost``. ``--server-hostname`` changes the expected identity, not the
+connection address or verification policy. A separate CA is not needed for
+an explicitly trusted self-signed certificate.
 
-.. code-block:: bash
-
-   padrelay-client --config client_config.ini
-   # TLS enabled by default
-
-That's it! The server will create certificates on first run, and the client will connect securely.
-
-Certificate Locations
----------------------
-
-Auto-Generated Certificates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Certificates are stored in:
-
-* **Linux/macOS:** ``~/.padrelay/certs/``
-* **Windows:** ``%USERPROFILE%\.padrelay\certs\``
-
-Files created:
-
-* ``server.crt`` - Server certificate (public)
-* ``server.key`` - Private key (keep secure!)
-
-**Permissions:**
-
-* Directory: ``700`` (owner only)
-* Private key: ``600`` (owner read/write only)
-
-Certificate Properties
-~~~~~~~~~~~~~~~~~~~~~~
-
-Auto-generated certificates have:
-
-* **Algorithm:** RSA 2048-bit
-* **Validity:** 365 days from creation
-* **Subject:** CN=localhost
-* **Self-signed:** Yes (not from trusted CA)
-
-Viewing Certificate Details
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To inspect a certificate:
-
-.. code-block:: bash
-
-   openssl x509 -in ~/.padrelay/certs/server.crt -text -noout
-
-Using Custom Certificates
---------------------------
-
-For production or better security, use certificates from a trusted Certificate Authority (CA).
-
-Generating with OpenSSL
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. **Generate private key:**
-
-.. code-block:: bash
-
-   openssl genrsa -out server.key 2048
-
-2. **Create certificate signing request (CSR):**
-
-.. code-block:: bash
-
-   openssl req -new -key server.key -out server.csr
-
-3. **Self-sign certificate (for testing):**
-
-.. code-block:: bash
-
-   openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
-
-4. **Or submit CSR to CA for signing** (for production)
-
-Using Let's Encrypt
-~~~~~~~~~~~~~~~~~~~
-
-For public-facing servers (not recommended for PadRelay), you can use Let's Encrypt:
-
-.. code-block:: bash
-
-   # Install certbot
-   sudo apt-get install certbot  # Ubuntu/Debian
-
-   # Generate certificate
-   sudo certbot certonly --standalone -d your-domain.com
-
-   # Use certificates
-   padrelay-server \
-     --cert-path /etc/letsencrypt/live/your-domain.com/fullchain.pem \
-     --key-path /etc/letsencrypt/live/your-domain.com/privkey.pem
-
-.. warning::
-   Let's Encrypt requires public internet access and domain validation. Only use for public servers on your own domain.
-
-Configuring Custom Certificates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Command-line:**
-
-.. code-block:: bash
-
-   padrelay-server \
-     --cert-path /path/to/server.crt \
-     --key-path /path/to/server.key
-
-**Configuration file:**
+The equivalent client settings are:
 
 .. code-block:: ini
 
-   [server]
-   cert_path = /path/to/server.crt
+   [security]
+   ca_path = /path/to/trusted-server.crt
+   server_hostname = localhost
+
+Omit ``ca_path`` to use system trust. A private CA normally needs its CA bundle
+there instead. An untrusted chain, expired certificate, incorrect hostname or
+missing trust file fails the connection. Correct the trust setup rather than
+disabling verification.
+
+Custom Identity
+---------------
+
+Supply both server paths:
+
+.. code-block:: ini
+
+   [security]
+   cert_path = /path/to/server-chain.pem
    key_path = /path/to/server.key
 
-TLS Configuration
+Or use ``--cert-path`` and ``--key-path``. Both files must exist, load correctly
+and match. The certificate file should include any required intermediates.
+The client still needs a matching trust root and expected SAN name/IP.
+
+To create a custom self-signed identity with the project's generator, choose
+new output paths:
+
+.. code-block:: python
+
+   from pathlib import Path
+   from padrelay.security.tls_utils import generate_self_signed_cert
+
+   generate_self_signed_cert(
+       cert_path=Path("new-server.crt"),
+       key_path=Path("new-server.key"),
+       common_name="padrelay.local",
+   )
+
+The generator adds the supplied name/IP to the default localhost SANs. Existing
+files and symlinks are not overwritten. Copy the public certificate to clients
+and use ``server_hostname = padrelay.local`` if connecting by another address.
+
+Inspect and Renew
 -----------------
 
-TLS Version
-~~~~~~~~~~~
-
-PadRelay enforces minimum TLS version:
-
-* **Minimum:** TLS 1.2
-* **Recommended:** TLS 1.3 (if supported by Python/OpenSSL version)
-
-Cipher Suites
-~~~~~~~~~~~~~
-
-PadRelay uses secure modern ciphers:
-
-* ECDHE-ECDSA-AES256-GCM-SHA384
-* ECDHE-RSA-AES256-GCM-SHA384
-* ECDHE-ECDSA-CHACHA20-POLY1305
-* ECDHE-RSA-CHACHA20-POLY1305
-* DHE-RSA-AES256-GCM-SHA384
-
-**Properties:**
-
-* Perfect Forward Secrecy (PFS)
-* Authenticated encryption (GCM, ChaCha20-Poly1305)
-* No weak ciphers (RC4, DES, 3DES, MD5)
-
-Disabling TLS
--------------
-
-.. warning::
-   Disabling TLS removes encryption. Only disable on trusted networks.
-
-When to Disable
-~~~~~~~~~~~~~~~
-
-* Testing on localhost
-* Already using VPN (WireGuard, OpenVPN)
-* Using SSH tunnel for connection
-* Incompatible network equipment
-
-How to Disable
-~~~~~~~~~~~~~~
-
-**Server:**
+If OpenSSL is available, inspect the certificate and compare its fingerprint
+over a trusted channel:
 
 .. code-block:: bash
 
-   padrelay-server --disable-tls
+   openssl x509 -in server.crt -noout -dates -fingerprint -sha256
 
-**Client:**
+The server warns within 30 days of expiry. It does not renew automatically.
+Stop the server, replace the matching certificate/key pair, and restart it.
+For the default generator, move both old identity files out of the default
+paths before restarting; leaving just one causes startup to fail.
 
-.. code-block:: bash
+When replacing a self-signed identity, distribute the new public certificate
+and update every client's trust copy. A CA-issued leaf renewed under the same
+trusted CA does not normally require a new client trust bundle.
 
-   padrelay-client --disable-tls
+Generated files use POSIX mode ``0600`` and the default directory ``0700``.
+For Windows and custom directories, restrict access through the appropriate
+ACLs or filesystem permissions. Do not place private keys in shared configs.
 
-**Configuration file:**
-
-.. code-block:: ini
-
-   [server]
-   enable_tls = false
-
-.. note::
-   Both client and server must have the same TLS setting (both enabled or both disabled).
-
-Certificate Management
-----------------------
-
-Certificate Expiration
-~~~~~~~~~~~~~~~~~~~~~~~
-
-PadRelay warns when certificates expire soon:
-
-.. code-block:: text
-
-   WARNING: TLS certificate expires in 15 days. Please renew certificate.
-
-To check expiration:
-
-.. code-block:: bash
-
-   openssl x509 -in ~/.padrelay/certs/server.crt -noout -enddate
-
-Renewing Certificates
-~~~~~~~~~~~~~~~~~~~~~
-
-**Auto-generated certificates:**
-
-.. code-block:: bash
-
-   # Delete old certificates
-   rm ~/.padrelay/certs/server.*
-
-   # Restart server to generate new ones
-   padrelay-server --config server_config.ini
-
-**Custom certificates:**
-
-Follow your CA's renewal process, then replace the certificate files and restart the server.
-
-Certificate Rotation
-~~~~~~~~~~~~~~~~~~~~
-
-For security best practices:
-
-1. Rotate certificates every 90-365 days
-2. Use strong key lengths (minimum 2048-bit RSA)
-3. Keep private keys secure (permissions 600)
-4. Don't reuse certificates across services
-
-Troubleshooting TLS
--------------------
-
-TLS Handshake Failed
-~~~~~~~~~~~~~~~~~~~~
-
-**Symptoms:**
-
-.. code-block:: text
-
-   ERROR: TLS handshake failed
-   ERROR: SSL: WRONG_VERSION_NUMBER
-
-**Causes and Solutions:**
-
-1. **Client/server TLS mismatch:**
-
-   Ensure both have TLS enabled or both have it disabled.
-
-2. **Certificate issues:**
-
-   Check certificate is valid and not expired.
-
-3. **System time mismatch:**
-
-   Synchronize system clocks on both machines.
-
-4. **Incompatible TLS versions:**
-
-   Update Python and OpenSSL to support TLS 1.2+.
-
-Certificate Validation Failed
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Symptoms:**
-
-.. code-block:: text
-
-   ERROR: Certificate verification failed
-
-**Solutions:**
-
-1. Using self-signed certificates is expected (client ignores validation)
-2. For custom CA certificates, ensure CA cert is in system trust store
-3. Check certificate hostname matches server address
-
-Permission Denied
-~~~~~~~~~~~~~~~~~
-
-**Symptoms:**
-
-.. code-block:: text
-
-   ERROR: Permission denied: ~/.padrelay/certs/server.key
-
-**Solutions:**
-
-.. code-block:: bash
-
-   # Fix permissions
-   chmod 600 ~/.padrelay/certs/server.key
-   chmod 700 ~/.padrelay/certs/
-
-Certificate Not Found
-~~~~~~~~~~~~~~~~~~~~~
-
-**Symptoms:**
-
-.. code-block:: text
-
-   ERROR: Certificate file not found
-
-**Solutions:**
-
-1. Let PadRelay auto-generate certificates (remove ``cert_path`` config)
-2. Verify certificate path is correct
-3. Check file permissions allow reading
-
-Debug TLS Issues
-~~~~~~~~~~~~~~~~
-
-Enable debug logging to see detailed TLS information:
-
-.. code-block:: bash
-
-   export PADRELAY_DEBUG=1
-   padrelay-server --config server_config.ini
-
-Debug logs show:
-
-* SSL context configuration
-* Certificate paths
-* TLS version negotiated
-* Cipher suite used
-* Handshake details
-
-Security Considerations
+Diagnose Trust Failures
 -----------------------
 
-Self-Signed Certificates
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Advantages:**
-
-* Free and easy to generate  
-* Provides encryption  
-* No certificate authority required  
-
-**Limitations:**
-
-* No identity verification  
-* Can be vulnerable to man-in-the-middle attacks if the first connection is intercepted  
-* May trigger certificate warnings in some tools  
-
-**Recommendation:**  
-Suitable for private or controlled networks where the connection path is trusted.
-
-CA-Signed Certificates
-~~~~~~~~~~~~~~~~~~~~~~
-
-**Advantages:**
-
-* Verifies server identity  
-* Protects against man-in-the-middle attacks  
-* Trusted by most clients by default  
-
-**Limitations:**
-
-* May involve cost (unless using Let's Encrypt)  
-* More complex setup  
-* Typically requires a registered domain name  
-
-**Recommendation:**  
-Use for production environments or when strong identity verification is required.
-
-Network Security
-~~~~~~~~~~~~~~~~
-
-TLS protects data in transit, but:
-
-* Still use strong passwords
-* Still use VPN for untrusted networks
-* Still avoid public internet exposure
-* Still keep software updated
-
-VPN vs TLS
-~~~~~~~~~~
-
-**Use both for maximum security:**
-
-* VPN provides network-level encryption and access control
-* TLS provides application-level encryption
-* Defense in depth approach
-
-**Or choose based on needs:**
-
-* **VPN only:** Simpler, protects all traffic, use UDP for lower latency
-* **TLS only:** No VPN required, per-application security, TCP only
-
-Testing TLS Connection
-----------------------
-
-Verify TLS is Working
-~~~~~~~~~~~~~~~~~~~~~
-
-Check server logs for:
-
-.. code-block:: text
-
-   INFO: TLS/SSL enabled
-   INFO: TLS version: TLSv1.3
-   INFO: Cipher: TLS_AES_256_GCM_SHA384
-
-Using OpenSSL Client
-~~~~~~~~~~~~~~~~~~~~
-
-Test TLS connection:
+With OpenSSL, test just the TLS layer for either transport mode:
 
 .. code-block:: bash
 
-   openssl s_client -connect SERVER_IP:9999 -tls1_2
+   openssl s_client -connect 192.168.1.100:9999 \
+     -CAfile trusted-server.crt -verify_hostname localhost -verify_return_error
 
-Should show certificate details and "Verify return code: 18 (self signed certificate)" for auto-generated certs.
+Use your actual certificate name. This does not authenticate as a PadRelay
+client or test UDP input. For application failures, see :doc:`troubleshooting`.
 
-Best Practices
---------------
-
-1. **Keep TLS enabled** for all production deployments
-2. **Use strong passwords** even with TLS
-3. **Rotate certificates** regularly
-4. **Secure private keys** with proper permissions
-5. **Monitor expiration** dates
-6. **Use VPN** for additional security
-7. **Update software** to get latest TLS fixes
-
-See Also
---------
-
-* :doc:`../security` - Security overview
-* :doc:`server` - Server configuration
-* :doc:`client` - Client configuration
-* :doc:`troubleshooting` - Troubleshooting guide
+``--disable-tls`` works only for TCP and must match on both peers. UDP rejects
+it, even inside a VPN. There is no CLI option to keep TLS but ignore certificate
+verification; the low-level SSL helper's insecure opt-out is not used by the CLI.
