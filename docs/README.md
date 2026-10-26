@@ -40,6 +40,7 @@ do not update the site. GitHub Pages must use GitHub Actions as its source.
 
 **Run Tests** runs through **Run workflow** in GitHub Actions or after a maintainer
 approves the current PR commit. Pushes and opening a PR do not trigger tests.
-**Build and Release** is manual against an existing `v*` tag; it publishes to
-PyPI before creating the GitHub release. See `.github/workflows/` for the actual
+**Build and Release** is manual on `main`; it publishes to PyPI before creating
+the GitHub release and its version tag. No existing tag is required.
+See `.github/workflows/` for the actual
 triggers and permissions.

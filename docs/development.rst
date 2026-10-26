@@ -5,7 +5,7 @@ Setup
 -----
 
 Use Python **3.11 or newer**. The ``Run Tests`` workflow checks Python
-3.11 and 3.12.
+3.11.
 From the repository root, create and activate a virtual environment named
 ``.venv``, then install the project and development tools:
 
@@ -117,16 +117,20 @@ workflow builds committed sources on ``main`` and deploys them to GitHub Pages.
 Releases
 --------
 
-Maintainers update ``pyproject.toml`` and ``CHANGELOG.md``, verify the checks,
-then create and push a ``v*`` tag. Publishing requires a manual run of
-``Build and Release`` against that tag; pushing it alone does not publish.
-The workflow runs the static checks and tests on Python 3.11 and 3.12 before
-building and publishing. Both versions must pass for the release to proceed.
-The tag must match the package version (``v2.0.0`` for ``2.0.0``), with a dated
-changelog entry. The workflow checks both before building and validates the
-distribution metadata before upload.
+Maintainers update ``pyproject.toml`` and ``CHANGELOG.md``, then push to ``main``.
+In GitHub Actions, select ``Build and Release``, click ``Run workflow`` and
+choose ``main``. Leave the release tag field blank to use ``v<version>`` from
+``pyproject.toml``, or enter that exact tag explicitly. A different tag stops
+the workflow before dependencies and tests run. The version is read at runtime;
+it is not hardcoded in the workflow. No existing tag is required; pushing alone
+does not publish.
+The workflow runs the static checks and tests on Python 3.11 before building
+and publishing. All checks must pass for the release to proceed.
+The package version must have a dated changelog entry. The workflow checks this
+before building and validates the distribution metadata before upload.
 The workflow uploads to PyPI using OIDC Trusted Publishing before creating the
-GitHub release. No PyPI API token or repository secret is required.
+GitHub release and its ``v<version>`` tag (``v2.0.0`` for ``2.0.0``) at the
+commit selected for the run. No PyPI API token or repository secret is required.
 
 See the `PyPI Trusted Publisher setup guide
 <https://docs.pypi.org/trusted-publishers/adding-a-publisher/>`_. Published PyPI versions cannot be overwritten.

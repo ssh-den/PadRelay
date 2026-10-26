@@ -80,7 +80,7 @@ python -m pip install -e ".[dev]"
 ```
 
 The [development guide](docs/development.rst) lists the checks and documentation
-build commands. **Run Tests** checks Python 3.11 and 3.12 when started manually
+build commands. **Run Tests** checks Python 3.11 when started manually
 through **Run workflow** or after a maintainer approves the current PR commit.
 Pushes and opening a PR do not trigger tests. Documentation and package publishing
 are manual workflows.
