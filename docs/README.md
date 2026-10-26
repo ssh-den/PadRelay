@@ -1,6 +1,6 @@
 # PadRelay Documentation
 
-This directory contains the complete documentation for PadRelay, built with Sphinx and hosted on ReadTheDocs.
+This directory contains the complete documentation for PadRelay, built with Sphinx and published to GitHub Pages.
 
 ## Building the Documentation
 
@@ -67,19 +67,26 @@ docs/
 
 ## Online Documentation
 
-The documentation is automatically built and published to:
+Documentation URLs:
 
 * **ReadTheDocs:** https://padrelay.readthedocs.io
 * **GitHub Pages:** https://ssh-den.github.io/PadRelay
 
 ## Continuous Integration
 
-Documentation is automatically built and validated on every pull request via GitHub Actions. The workflow:
+All GitHub Actions workflows run manually. To publish documentation:
+
+1. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source.
+2. Open **Actions → Documentation → Run workflow** and select `main`.
+
+The documentation workflow:
 
 1. Builds HTML documentation with Sphinx
 2. Checks for broken links
 3. Uploads build artifacts
-4. Deploys to GitHub Pages (on main branch)
+4. Deploys to GitHub Pages (manual run on `main`)
+
+**Run Tests** is also manual. To publish a package, run **Build and Release** against an existing `v*` tag; it uploads to PyPI and creates a GitHub release.
 
 See `.github/workflows/docs.yml` for the workflow configuration.
 
