@@ -1,5 +1,5 @@
 """Tests for log sanitization"""
-import pytest
+
 from padrelay.core.logging_utils import sanitize_for_logging
 
 

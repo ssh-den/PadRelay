@@ -1,4 +1,5 @@
 import sys
+
 import pytest
 
 from padrelay.scripts import key_mapper as key_mapper_script

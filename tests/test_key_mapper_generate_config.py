@@ -1,4 +1,5 @@
 import configparser
+
 from padrelay.scripts import key_mapper as key_mapper_script
 from padrelay.server.input_processor import GamepadHandler
 

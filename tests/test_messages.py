@@ -1,14 +1,6 @@
-import pytest
 from padrelay.protocol.messages import (
     BaseMessage,
     InputMessage,
-    HeartbeatMessage,
-    HeartbeatAckMessage,
-    AuthChallengeMessage,
-    AuthResponseMessage,
-    AuthSuccessMessage,
-    AuthFailedMessage,
-    ErrorMessage,
     validate_input_message,
 )
 

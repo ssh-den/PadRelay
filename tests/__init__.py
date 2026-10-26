@@ -2,12 +2,12 @@ import sys
 import types
 
 # Provide a minimal pygame stub to satisfy imports during tests
-if 'pygame' not in sys.modules:
+if "pygame" not in sys.modules:
     joystick = types.SimpleNamespace(
         init=lambda: None,
         Joystick=lambda idx: types.SimpleNamespace(
             init=lambda: None,
-            get_name=lambda: 'dummy',
+            get_name=lambda: "dummy",
             get_numaxes=lambda: 0,
             get_numbuttons=lambda: 0,
             get_numhats=lambda: 0,
@@ -23,4 +23,4 @@ if 'pygame' not in sys.modules:
         joystick=joystick,
         event=types.SimpleNamespace(pump=lambda: None),
     )
-    sys.modules['pygame'] = pygame_stub
+    sys.modules["pygame"] = pygame_stub

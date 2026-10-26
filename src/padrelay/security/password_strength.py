@@ -1,6 +1,8 @@
 """Password strength checking utilities"""
+
 import re
-from typing import Tuple, List
+from typing import List, Tuple
+
 from ..core.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -37,9 +39,9 @@ def check_password_strength(password: str) -> Tuple[str, int, List[str]]:
         score += 40
 
     # Character variety checks
-    has_lowercase = bool(re.search(r'[a-z]', password))
-    has_uppercase = bool(re.search(r'[A-Z]', password))
-    has_digits = bool(re.search(r'\d', password))
+    has_lowercase = bool(re.search(r"[a-z]", password))
+    has_uppercase = bool(re.search(r"[A-Z]", password))
+    has_digits = bool(re.search(r"\d", password))
     has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/;\'`~]', password))
 
     char_types = sum([has_lowercase, has_uppercase, has_digits, has_special])
@@ -57,18 +59,20 @@ def check_password_strength(password: str) -> Tuple[str, int, List[str]]:
     elif char_types == 3:
         score += 30
         if not has_special:
-            recommendations.append("Consider adding special characters for maximum security")
+            recommendations.append(
+                "Consider adding special characters for maximum security"
+            )
     else:  # char_types == 4
         score += 40
 
     # Common pattern checks
     common_patterns = [
-        (r'123', "Avoid sequential numbers (123, 456, etc.)"),
-        (r'abc', "Avoid sequential letters (abc, def, etc.)"),
-        (r'qwerty', "Avoid keyboard patterns (qwerty, asdf, etc.)"),
-        (r'password', "Don't use the word 'password'"),
-        (r'admin', "Don't use the word 'admin'"),
-        (r'(.)\1{2,}', "Avoid repeating characters (aaa, 111, etc.)"),
+        (r"123", "Avoid sequential numbers (123, 456, etc.)"),
+        (r"abc", "Avoid sequential letters (abc, def, etc.)"),
+        (r"qwerty", "Avoid keyboard patterns (qwerty, asdf, etc.)"),
+        (r"password", "Don't use the word 'password'"),
+        (r"admin", "Don't use the word 'admin'"),
+        (r"(.)\1{2,}", "Avoid repeating characters (aaa, 111, etc.)"),
     ]
 
     for pattern, message in common_patterns:
@@ -79,15 +83,36 @@ def check_password_strength(password: str) -> Tuple[str, int, List[str]]:
 
     # Common weak passwords
     weak_passwords = [
-        '123456', 'password', '12345678', 'qwerty', '123456789', '12345',
-        '1234', '111111', '1234567', 'dragon', '123123', 'baseball',
-        'abc123', 'football', 'monkey', 'letmein', 'shadow', 'master',
-        'abc', '123', 'admin', 'test', 'guest'
+        "123456",
+        "password",
+        "12345678",
+        "qwerty",
+        "123456789",
+        "12345",
+        "1234",
+        "111111",
+        "1234567",
+        "dragon",
+        "123123",
+        "baseball",
+        "abc123",
+        "football",
+        "monkey",
+        "letmein",
+        "shadow",
+        "master",
+        "abc",
+        "123",
+        "admin",
+        "test",
+        "guest",
     ]
 
     if password.lower() in weak_passwords:
         score = max(0, score - 30)
-        recommendations.append("This is a commonly used password - choose something unique")
+        recommendations.append(
+            "This is a commonly used password - choose something unique"
+        )
 
     # Ensure score is in 0-100 range
     score = max(0, min(100, score))
@@ -117,7 +142,7 @@ def warn_weak_password(password: str) -> bool:
         True if password is acceptable, False if very weak
     """
     # Skip check for hashed passwords
-    if password and password.startswith('pbkdf2_sha256$'):
+    if password and password.startswith("pbkdf2_sha256$"):
         return True
 
     strength, score, recommendations = check_password_strength(password)
@@ -127,7 +152,9 @@ def warn_weak_password(password: str) -> bool:
         logger.error("CRITICAL: Password is VERY WEAK!")
         logger.error(f"Password strength score: {score}/100")
         logger.error("")
-        logger.error("Your password provides minimal security and can be easily guessed.")
+        logger.error(
+            "Your password provides minimal security and can be easily guessed."
+        )
         logger.error("Strongly consider using a stronger password.")
         logger.error("")
         if recommendations:
@@ -182,6 +209,6 @@ def generate_password_suggestion() -> str:
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
 
     # Generate 16 character password
-    password = ''.join(secrets.choice(chars) for _ in range(16))
+    password = "".join(secrets.choice(chars) for _ in range(16))
 
     return password

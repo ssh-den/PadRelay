@@ -9,8 +9,8 @@ description = "A client-server application for transmitting gamepad input over a
 readme = "README.md"
 authors = [{ name = "ssh-den", email = "sshden@duck.com" }]
 license = "MIT"
-requires-python = ">=3.6"
-dependencies = ["pygame"]
+requires-python = ">=3.11"
+dependencies = ["pygame", "cryptography>=41.0.0"]
 
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -18,15 +18,14 @@ classifiers = [
   "Intended Audience :: End Users/Desktop",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.6",
-  "Programming Language :: Python :: 3.7",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Games/Entertainment"
 ]
 
 [project.optional-dependencies]
 server = ["vgamepad"]
+dev = ["pytest", "pytest-asyncio", "pytest-cov", "mypy", "ruff", "black", "pylint", "pyright"]
 
 [project.scripts]
 padrelay-client = "padrelay.scripts.client:main"
@@ -41,3 +40,42 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+target-version = ["py311"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]
+
+[tool.mypy]
+files = ["src"]
+python_version = "3.11"
+check_untyped_defs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "vgamepad"
+ignore_missing_imports = true
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+
+[tool.pylint.main]
+py-version = "3.11"
+ignore-paths = ["^tests/", "^docs/"]
+
+[tool.pylint.messages_control]
+# Black/Ruff own formatting/imports; retain Pylint's error and warning checks.
+# Outer application loops deliberately log exceptions and keep running.
+disable = ["C", "R", "logging-fstring-interpolation", "broad-exception-caught"]
+
+[tool.pylint.typecheck]
+ignored-modules = ["pygame", "vgamepad"]

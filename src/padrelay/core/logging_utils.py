@@ -6,8 +6,6 @@ import os
 import re
 from pathlib import Path
 
-
-
 _LOG_FILE_NAME = "padrelay.log"
 
 
@@ -26,9 +24,7 @@ def _setup_root_logger(log_dir: Path) -> None:
     os.chmod(log_dir, 0o700)
     log_file = log_dir / _LOG_FILE_NAME
 
-    formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 
     # Rotate logs to prevent uncontrolled growth
     file_handler = logging.handlers.RotatingFileHandler(
@@ -80,13 +76,13 @@ def sanitize_for_logging(value: str, max_length: int = 200) -> str:
         value = str(value)
 
     # Replace newlines and carriage returns to prevent log injection
-    sanitized = value.replace('\n', '\\n').replace('\r', '\\r')
+    sanitized = value.replace("\n", "\\n").replace("\r", "\\r")
 
     # Replace other control characters
-    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', sanitized)
+    sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", sanitized)
 
     # Limit length to prevent log flooding
     if len(sanitized) > max_length:
-        sanitized = sanitized[:max_length] + '...'
+        sanitized = sanitized[:max_length] + "..."
 
     return sanitized

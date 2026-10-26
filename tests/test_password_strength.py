@@ -1,9 +1,9 @@
 """Tests for password strength checking"""
-import pytest
+
 from padrelay.security.password_strength import (
     check_password_strength,
-    warn_weak_password,
     generate_password_suggestion,
+    warn_weak_password,
 )
 
 
@@ -43,7 +43,9 @@ class TestPasswordStrengthCheck:
 
     def test_very_strong_password(self):
         """Test very strong password"""
-        strength, score, recommendations = check_password_strength("MyV3ry$tr0ng!P@ssw0rd")
+        strength, score, recommendations = check_password_strength(
+            "MyV3ry$tr0ng!P@ssw0rd"
+        )
         assert strength in ["strong", "very_strong"]
         assert score >= 60
 
