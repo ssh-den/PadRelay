@@ -1,31 +1,66 @@
-from padrelay.protocol.messages import (
-    BaseMessage,
-    InputMessage,
-    validate_input_message,
-)
+import json
+
+import pytest
+
+from padrelay.core.controller_state import InputState
+from padrelay.protocol.messages import BaseMessage, InputMessage, validate_input_message
 
 
 def test_message_serialization_roundtrip():
-    msg = InputMessage(buttons=[True, False], axes=[0.0, 1.0], hats=[(0, 1)])
-    json_data = msg.to_json()
-    msg_bytes = msg.to_bytes()
-    assert isinstance(json_data, str)
-    assert isinstance(msg_bytes, bytes)
-
-    # Deserialize using BaseMessage.from_dict
-    parsed = BaseMessage.from_dict(msg.data)
+    state = InputState(frozenset({"a", "dpad_up"}), left_x=0.5, trigger_right=1.0)
+    message = InputMessage(state)
+    parsed = BaseMessage.from_dict(json.loads(message.to_bytes()))
     assert isinstance(parsed, InputMessage)
-    assert parsed.data["buttons"] == [True, False]
-
-
-def test_validate_input_message():
-    valid = {
-        "type": "input",
-        "buttons": [True, False],
-        "axes": [0.0, 0.5],
-        "hats": [(0, 1)],
+    assert InputState.from_message(parsed.data) == state
+    assert set(parsed.data) == {
+        "type",
+        "protocol_version",
+        "buttons",
+        "axes",
+        "triggers",
     }
-    assert validate_input_message(valid)
 
-    invalid = {"type": "input", "buttons": ["bad"]}
-    assert not validate_input_message(invalid)
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("buttons", []),
+        ("axes", []),
+        ("triggers", []),
+        ("buttons", {"a": True}),
+        ("axes", {"left_x": 0}),
+        ("triggers", {"left": 0}),
+        ("protocol_version", "1.0"),
+        ("type", "heartbeat"),
+        ("controller", {}),
+        ("hats", [[0, 1]]),
+        ("timestamp", "ignored"),
+    ],
+)
+def test_incomplete_legacy_or_duplicated_state_is_rejected(field, value):
+    packet = InputState().to_message()
+    packet[field] = value
+    assert not validate_input_message(packet)
+
+
+@pytest.mark.parametrize(
+    "value", [True, "1", None, float("nan"), float("inf"), -1.1, 1.1]
+)
+def test_invalid_axis_values(value):
+    packet = InputState().to_message()
+    packet["axes"]["left_x"] = value
+    assert not validate_input_message(packet)
+
+
+@pytest.mark.parametrize("value", [-0.1, 1.1, True, float("nan")])
+def test_invalid_trigger_values(value):
+    packet = InputState().to_message()
+    packet["triggers"]["left"] = value
+    assert not validate_input_message(packet)
+
+
+def test_full_neutral_is_valid_and_false_is_not_a_numeric_axis():
+    packet = InputState().to_message()
+    assert validate_input_message(packet)
+    packet["buttons"]["a"] = 1
+    assert not validate_input_message(packet)

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from padrelay.client.client_app import VirtualGamepadClient
+from padrelay.core.controller_state import InputState
 from padrelay.protocol.constants import MAX_MESSAGE_SIZE
 from padrelay.protocol.messages import validate_input_message
 from padrelay.protocol.tcp import TCPProtocolHandler
@@ -36,8 +37,8 @@ async def test_tcp_discards_non_object_payloads(data):
     assert await TCPProtocolHandler(reader).read_message() is None
 
 
-def test_hat_pairs_survive_json_roundtrip():
-    message = {"type": "input", "buttons": [], "axes": [], "hats": [(0, 1)]}
+def test_logical_dpad_survives_json_roundtrip():
+    message = InputState(frozenset({"dpad_up", "dpad_left"})).to_message()
     assert validate_input_message(json.loads(json.dumps(message)))
 
 

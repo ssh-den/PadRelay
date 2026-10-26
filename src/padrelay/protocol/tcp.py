@@ -54,12 +54,14 @@ class TCPProtocolHandler:
             if self.writer is None:
                 return False
             if isinstance(message, dict):
-                data = json.dumps(message).encode("utf-8")
+                data = json.dumps(message, allow_nan=False).encode("utf-8")
             elif isinstance(message, str):
                 data = message.encode("utf-8")
             else:
                 data = message
 
+            if not 0 < len(data) <= MAX_MESSAGE_SIZE:
+                return False
             self.writer.write(struct.pack(">I", len(data)) + data)
             return True
         except Exception as e:

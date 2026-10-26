@@ -134,9 +134,21 @@ class VirtualGamepadClient:
         logger.info("Shutdown complete")
         return True
 
+    async def _wait_for_controller(self) -> bool:
+        while not self.shutdown_event.is_set():
+            if self.gamepad.is_available():
+                return True
+            try:
+                await asyncio.wait_for(self.shutdown_event.wait(), 0.1)
+            except asyncio.TimeoutError:
+                pass
+        return False
+
     async def _run_tcp(self) -> None:
         """Main loop for TCP mode"""
         while not self.shutdown_event.is_set():
+            if not await self._wait_for_controller():
+                break
             tcp_handler = None
             try:
                 # Connect to server
@@ -193,20 +205,16 @@ class VirtualGamepadClient:
                 # Main sending loop
                 send_interval = 1.0 / self.update_rate
                 last_send_time = time.time()
-                batch_counter = 0
 
                 while not self.shutdown_event.is_set():
                     # Poll gamepad and send update
                     message = self.gamepad.poll()
+                    if message is None:
+                        logger.warning(
+                            "Controller unavailable; closing session to reset output"
+                        )
+                        break
                     if message:
-                        # Strip unnecessary fields to reduce message size
-                        if (
-                            batch_counter % 10 != 0
-                        ):  # Only include full data every 10th message
-                            if "timestamp" in message:
-                                del message["timestamp"]
-
-                        batch_counter += 1
                         if not await tcp_handler.send_message(message):
                             break
                         if not await tcp_handler.drain():
@@ -372,6 +380,8 @@ class VirtualGamepadClient:
         """TLS owns authentication, key distribution, heartbeat and UDP lifetime."""
         loop = asyncio.get_running_loop()
         while not self.shutdown_event.is_set():
+            if not await self._wait_for_controller():
+                break
             tcp_handler = None
             udp_handler = None
             self.udp_session = None
@@ -405,6 +415,11 @@ class VirtualGamepadClient:
                     ):
                         break
                     message = self.gamepad.poll()
+                    if message is None:
+                        logger.warning(
+                            "Controller unavailable; closing session to reset output"
+                        )
+                        break
                     if message and not udp_handler.send_message(
                         session.encode(message)
                     ):

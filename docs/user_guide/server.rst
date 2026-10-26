@@ -46,10 +46,11 @@ Choose ``xbox360`` or ``ds4`` with ``--gamepad-type`` or ``[vgamepad] type``.
 DS4 mode does not forward touchpad, gyro, rumble or other feedback features.
 Open ``joy.cpl`` to check that the virtual device exists and receives input.
 
-Mappings live on the server. See :doc:`key_mapper` for generating them and
-:doc:`../configuration` for fallback behavior. Hats are transmitted but are not
-currently applied by the output handler; generated hat sections do not fix
-that limitation.
+Physical profiles and calibration live on the client; see :doc:`key_mapper`.
+The server accepts only protocol-2 logical state. The adapter supports D-pad
+diagonals/neutral and DS4 PS through the native special-button API.
+``[server] input_timeout`` resets stale input independently of heartbeat; default
+1.0 seconds, checked every 50 milliseconds.
 
 Lifecycle and Logs
 ------------------

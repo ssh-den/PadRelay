@@ -1,7 +1,7 @@
 Protocol
 ========
 
-The JSON/control version is ``1.0``. UDP uses envelope version ``2`` with magic
+The JSON/control version is ``2.0``. UDP uses envelope version ``2`` with magic
 ``PRU2``. There is no version negotiation or fallback to legacy UDP tokens.
 
 TCP Framing
@@ -24,7 +24,7 @@ After the TLS handshake, the server reserves a connection slot and sends:
 
    {
      "type": "auth_challenge",
-     "protocol_version": "1.0",
+     "protocol_version": "2.0",
      "challenge": "0123456789abcdef0123456789abcdef",
      "salt": "0123456789abcdef0123456789abcdef",
      "iterations": 100000
@@ -49,10 +49,10 @@ hash as the server. The response is:
 
 .. code-block:: json
 
-   {"type": "auth_response", "protocol_version": "1.0", "response": "<64 hex characters>"}
+   {"type": "auth_response", "protocol_version": "2.0", "response": "<64 hex characters>"}
 
 The server compares the response with ``hmac.compare_digest`` and replies with
-``auth_success`` or ``auth_failed``, each with ``protocol_version: "1.0"``.
+``auth_success`` or ``auth_failed``, each with ``protocol_version: "2.0"``.
 Malformed or failed authentication closes the connection. An ``error`` reply
 may contain a human-readable ``message`` when admission is denied; it has no
 numeric error-code contract. CLI server mode requires a password.
@@ -63,7 +63,7 @@ For UDP, ``auth_success`` additionally contains:
 
    {
      "type": "auth_success",
-     "protocol_version": "1.0",
+     "protocol_version": "2.0",
      "udp_session": {
        "version": 2,
        "session_id": "<32 hex characters>",
@@ -77,33 +77,57 @@ control connection. This material is sent only inside TLS.
 Input
 -----
 
-The client sends the current state, not a list of button events:
+Each input packet is exactly one complete logical snapshot. There are no raw
+physical indices, hat arrays, duplicated controller blocks or per-frame timestamps.
+Unknown/missing fields, legacy arrays and incompatible versions are rejected.
 
 .. code-block:: json
 
    {
      "type": "input",
-     "protocol_version": "1.0",
-     "buttons": [true, false, true],
-     "axes": [0.0, -0.5, 0.8, 0.0],
-     "hats": [[0, 1]],
-     "triggers": [0.0, 0.7]
+     "protocol_version": "2.0",
+     "buttons": {
+       "a": false,
+       "b": false,
+       "x": false,
+       "y": false,
+       "lb": false,
+       "rb": false,
+       "view": false,
+       "menu": false,
+       "guide": false,
+       "left_stick": false,
+       "right_stick": false,
+       "dpad_up": false,
+       "dpad_down": false,
+       "dpad_left": false,
+       "dpad_right": false
+     },
+     "axes": {
+       "left_x": 0.0,
+       "left_y": 0.0,
+       "right_x": 0.0,
+       "right_y": 0.0
+     },
+     "triggers": {
+       "left": 0.0,
+       "right": 0.0
+     }
    }
 
-* ``buttons`` is a boolean array indexed by physical button number.
-* ``axes`` contains numbers in [-1, 1]; ``triggers`` contains numbers in [0, 1].
-* ``hats`` contains integer pairs with coordinates -1, 0 or 1. Hats are carried
-  and validated, but the current gamepad handler does not apply them to output.
+Buttons have boolean values and the exact logical names shown above. Axes are
+finite numbers in [-1, 1], with positive Y meaning up. Triggers are finite
+numbers in [0, 1], with zero released. Booleans are not numeric axis values.
+Every field is required, including neutral values, so omissions cannot retain
+old output. Calibration and physical mapping happen only on the client.
 
-Absent arrays default to empty during validation. Send complete state arrays
-to avoid retaining previous output unintentionally. ``timestamp`` may be present
-but is not required or used for authentication. The TCP client omits it from
-most updates. Unknown fields have no defined effect.
-
-TCP carries this JSON directly after authentication. UDP encrypts it in the
-envelope below. Input is validated before gamepad processing; invalid input is
-discarded, not clamped. UDP also checks ``protocol_version`` on each input.
-TCP checks it during authentication, not in the input validator.
+Input and control use version 2.0. Both peers must be upgraded together; there
+is no legacy input fallback. UDP envelope version 2 is unchanged. Input is
+validated before output processing in both transports. TCP sends this JSON
+after authentication; UDP encrypts it in the envelope below. Server output is
+reset on disconnect or after ``server.input_timeout`` seconds without valid
+input (default 1.0), even while heartbeat remains alive. The watchdog checks
+every 50 milliseconds. Unchanged valid snapshots refresh the input deadline.
 
 UDP Envelope
 ------------
@@ -142,7 +166,7 @@ Heartbeat and Lifecycle
 
 The client sends ``heartbeat`` over the TCP/TLS stream, starting after login,
 then at 30-second intervals. The server responds with ``heartbeat_ack`` and
-``protocol_version: "1.0"``. A heartbeat response has a five-second deadline;
+``protocol_version: "2.0"``. A heartbeat response has a five-second deadline;
 the server waits at most 35 seconds for its next stream message.
 
 TLS handshake and server authentication each have a five-second deadline.

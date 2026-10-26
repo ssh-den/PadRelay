@@ -23,9 +23,22 @@ the device indices in the client's Python environment:
        print(index, device.get_name())
    pygame.quit()
 
-Device indices can change after reconnecting hardware. The client loads
-``[joystick] index``; server button and axis mappings do not affect capture.
-Use :doc:`key_mapper` to correct the server's interpretation of those indices.
+The index is used for initial selection. After disconnection the client searches
+for the recorded GUID/name/platform/input counts, rather than reusing that index.
+An ambiguous match among identical devices is never selected automatically.
+Startup without a connected device waits for the selected index to appear.
+
+Automatic Mapping and Profiles
+-------------------------------
+
+SDL GameController supplies logical button/stick/trigger meanings for supported
+devices. Recognition uses SDL support, not the device display name or axis count.
+Unknown devices require a client JSON profile from :doc:`key_mapper`.
+``--controller-profile`` or ``[joystick] profile`` selects that profile, which
+overrides SDL capture completely. There is one normalization path per device.
+
+Only canonical logical state crosses the network. Physical data, calibration
+and profiles remain on the client. Both peers must support protocol 2.0.
 
 Transport and Update Rate
 -------------------------
@@ -49,6 +62,10 @@ Connection failures normally retry after a fixed five seconds until shutdown.
 Heartbeat runs over TCP/TLS in either mode. UDP sessions expire after 600 seconds
 and reconnect with fresh keys; losing control invalidates the old data session.
 Trust errors never cause a plaintext retry.
+
+A failed controller read closes the network session so the server resets held
+input. The client waits for a matching physical controller and reopens it automatically.
+If multiple matching devices are present, explicitly select one and restart.
 
 Use ``Ctrl+C`` to stop. Shutdown cancels pending connection/retry waits and
 allows at most one second for graceful stream closure before aborting it.

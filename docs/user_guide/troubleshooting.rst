@@ -84,19 +84,16 @@ is preferable on the current network.
 Controller or Output Failure
 ----------------------------
 
-If capture fails, check the device list in :doc:`client` and select the correct
-``[joystick] index``. The mapper uses the first device and has no index flag.
-If a native module is missing, verify installation in the running Python
-environment; the Windows server needs the ``server`` extra and ViGEmBus.
+Select the correct ``--joystick-index`` on both client and mapper. An unknown
+device needs a client JSON profile; a mismatched profile stops capture. The
+client automatically reconnects only a unique matching device identity. When
+multiple identical devices are present, explicitly select one and restart.
 
-Use ``joy.cpl`` to separate a missing virtual device from a wrong mapping.
-Server mappings do not belong in the client configuration. A nonempty custom
-button map replaces defaults, and a partial axis map has no basic-path fallback
-for omitted controls. See :doc:`key_mapper` and :doc:`../configuration`.
-
-Hats and generated ``*_hat`` sections are not applied by the current server.
-Changing network mode will not fix hat-only D-pad input. Touchpad, gyro, rumble
-and feedback forwarding are also outside the current input handler.
+Use ``joy.cpl`` to distinguish a missing virtual device from incorrect input.
+Windows output still requires the ``server`` extra and ViGEmBus. Remove legacy
+server mapping sections and regenerate a client profile for protocol 2.0.
+Hat inputs are normalized on the client; DS4 D-pad and PS use special output
+APIs. Touchpad, gyro and feedback forwarding are not implemented.
 
 Latency or High CPU
 -------------------

@@ -98,7 +98,9 @@ Input and Local Files
 ---------------------
 
 Every input is validated before gamepad processing. Buttons must be booleans,
-axes within [-1, 1], triggers within [0, 1], and hats integer pairs in {-1, 0, 1}.
+axes are finite values within [-1, 1] and triggers within [0, 1]. Exact named
+fields and protocol version are required; legacy arrays, hats and duplicate
+controller blocks are rejected. Booleans are not numeric axis values.
 Invalid messages are discarded. Neither transport accepts payloads beyond its
 4096-byte receive limit.
 

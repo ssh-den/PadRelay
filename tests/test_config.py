@@ -62,6 +62,39 @@ def test_parse_client_args_defaults(monkeypatch):
     assert cfg_obj is None
 
 
+def test_explicit_zero_index_and_profile_override_ini(tmp_path, monkeypatch):
+    path = tmp_path / "client.ini"
+    path.write_text(
+        "[network]\npassword=test-password\n[joystick]\nindex=2\nprofile=old.json\n"
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "client",
+            "--config",
+            str(path),
+            "--joystick-index",
+            "0",
+            "--controller-profile",
+            "new.json",
+        ],
+    )
+    args, _ = config.parse_client_args()
+    assert args.joystick_index == 0
+    assert args.controller_profile == "new.json"
+
+
+def test_profile_uses_ini_when_cli_omits_it(tmp_path, monkeypatch):
+    path = tmp_path / "client.ini"
+    path.write_text(
+        "[network]\npassword=test-password\n[joystick]\nprofile=controller.json\n"
+    )
+    monkeypatch.setattr(sys, "argv", ["client", "--config", str(path)])
+    args, _ = config.parse_client_args()
+    assert args.controller_profile == "controller.json"
+
+
 def test_parse_client_args_config_and_override(tmp_path, monkeypatch):
     cfg = tmp_path / "c.ini"
     cfg.write_text("""[network]

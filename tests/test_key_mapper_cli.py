@@ -10,5 +10,5 @@ def test_padrelay_keymapper_help(monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc:
         key_mapper_script.main()
     out = capsys.readouterr().out
-    assert "Controller Key Mapper" in out
+    assert "--joystick-index" in out and "--output" in out
     assert exc.value.code == 0

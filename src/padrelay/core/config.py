@@ -19,6 +19,18 @@ from .logging_utils import get_logger
 logger = get_logger(__name__)
 
 
+def validate_controller_config(config: Optional[configparser.ConfigParser]) -> None:
+    """Reject obsolete physical maps before native output allocation."""
+    if config and any(
+        section in {"axis_mapping", "axis_options"}
+        or section.startswith("button_mapping")
+        for section in config.sections()
+    ):
+        raise ValueError(
+            "Physical mappings/calibration moved to client JSON profiles; run padrelay-keymapper"
+        )
+
+
 def load_config(config_path: str) -> Optional[configparser.ConfigParser]:
 
     config = configparser.ConfigParser()
@@ -70,6 +82,9 @@ def parse_client_args() -> (
     parser.add_argument(
         "--joystick-index", type=int, help="Index of the joystick to use"
     )
+    parser.add_argument(
+        "--controller-profile", help="Client controller profile JSON file"
+    )
     parser.add_argument("--update-rate", type=int, help="Update rate in Hz")
     parser.add_argument(
         "--ca-path",
@@ -108,6 +123,8 @@ def parse_client_args() -> (
     config_obj = None
     if args.config:
         config_obj = load_config(args.config)
+        if config_obj is None:
+            raise ValueError("Cannot load client configuration")
         if config_obj and config_obj.has_section("network"):
             if not args.server_ip and "server_ip" in config_obj["network"]:
                 args.server_ip = config_obj["network"]["server_ip"]
@@ -124,8 +141,10 @@ def parse_client_args() -> (
             if not args.password_hash and "password_hash" in config_obj["network"]:
                 args.password_hash = config_obj["network"]["password_hash"]
         if config_obj and config_obj.has_section("joystick"):
-            if not args.joystick_index and "index" in config_obj["joystick"]:
+            if args.joystick_index is None and "index" in config_obj["joystick"]:
                 args.joystick_index = config_obj.getint("joystick", "index")
+            if args.controller_profile is None:
+                args.controller_profile = config_obj["joystick"].get("profile")
         if config_obj and config_obj.has_section("client"):
             if not args.update_rate and "update_rate" in config_obj["client"]:
                 args.update_rate = config_obj.getint("client", "update_rate")
@@ -154,8 +173,10 @@ def parse_client_args() -> (
         args.server_port = 9999
     if not args.protocol:
         args.protocol = "tcp"
-    if not args.joystick_index:
+    if args.joystick_index is None:
         args.joystick_index = 0
+    if args.joystick_index < 0:
+        raise ValueError("Joystick index must be nonnegative")
     if not args.update_rate:
         args.update_rate = 60
 
@@ -373,6 +394,8 @@ def validate_server_config(
     args: argparse.Namespace, config_obj: Optional[configparser.ConfigParser]
 ) -> None:
     """Validate the server configuration arguments"""
+
+    validate_controller_config(config_obj)
 
     if not args.host:
         raise ValueError("Host not specified.")

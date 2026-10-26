@@ -27,17 +27,16 @@ Password challenge-response with a plaintext client and hashed server:
    response = client.generate_tcp_response(challenge)
    assert server.verify_tcp_response(challenge, response)
 
-An input message uses booleans for buttons and a list for trigger values:
+An input message serializes a complete canonical state:
 
 .. code-block:: python
 
    import json
+   from padrelay.core.controller_state import InputState
    from padrelay.protocol.messages import InputMessage, validate_input_message
 
-   message = InputMessage(
-       buttons=[True, False], axes=[0.0, -0.5],
-       hats=[(0, 1)], triggers=[0.0, 0.7],
-   )
+   message = InputMessage(InputState(frozenset({"a", "dpad_up"}),
+                                     left_y=0.5, trigger_right=0.7))
    assert validate_input_message(json.loads(message.to_json()))
 
 Admission and request budgets use ``ConnectionTracker``; there is no separate
@@ -82,6 +81,12 @@ Constants
 .. automodule:: padrelay.client.constants
    :members:
    :undoc-members:
+
+Controller Profiles
+~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: padrelay.client.controller_profile
+   :members:
 
 Server
 ------
@@ -185,6 +190,12 @@ Password Warnings
 
 Core
 ----
+
+Controller State
+~~~~~~~~~~~~~~~~
+
+.. automodule:: padrelay.core.controller_state
+   :members:
 
 Configuration
 ~~~~~~~~~~~~~

@@ -1,164 +1,108 @@
-"""Virtual gamepad wrapper for the server."""
+"""The only adapter that knows vgamepad/ViGEm target details."""
 
 from configparser import ConfigParser
-from typing import Any, Dict, Optional
+from typing import Any
 
-from ..core.logging_utils import get_logger
+from ..core.config import validate_controller_config
+from ..core.controller_state import InputState
 
-logger = get_logger(__name__)
+XBOX_BUTTONS = {
+    "a": "A",
+    "b": "B",
+    "x": "X",
+    "y": "Y",
+    "lb": "LEFT_SHOULDER",
+    "rb": "RIGHT_SHOULDER",
+    "view": "BACK",
+    "menu": "START",
+    "guide": "GUIDE",
+    "left_stick": "LEFT_THUMB",
+    "right_stick": "RIGHT_THUMB",
+    "dpad_up": "DPAD_UP",
+    "dpad_down": "DPAD_DOWN",
+    "dpad_left": "DPAD_LEFT",
+    "dpad_right": "DPAD_RIGHT",
+}
+DS4_BUTTONS = {
+    "a": "CROSS",
+    "b": "CIRCLE",
+    "x": "SQUARE",
+    "y": "TRIANGLE",
+    "lb": "SHOULDER_LEFT",
+    "rb": "SHOULDER_RIGHT",
+    "view": "SHARE",
+    "menu": "OPTIONS",
+    "left_stick": "THUMB_LEFT",
+    "right_stick": "THUMB_RIGHT",
+}
+DPAD = {
+    (0, 0): "NONE",
+    (0, 1): "NORTH",
+    (1, 1): "NORTHEAST",
+    (1, 0): "EAST",
+    (1, -1): "SOUTHEAST",
+    (0, -1): "SOUTH",
+    (-1, -1): "SOUTHWEST",
+    (-1, 0): "WEST",
+    (-1, 1): "NORTHWEST",
+}
 
 
 class VirtualGamepad:
-    """Wraps ``vgamepad`` to provide a unified API"""
-
     def __init__(
-        self, gamepad_type: str = "xbox360", config: Optional[ConfigParser] = None
-    ) -> None:
-        """Create the virtual gamepad"""
-        self.gamepad_type = gamepad_type.lower()
-        self.config = config
-        self.gamepad: Any = None  # Native driver has no portable type stubs.
-        self.button_mapping: Dict[int, int] = {}
+        self, gamepad_type: str = "xbox360", config: ConfigParser | None = None
+    ):
+        if gamepad_type not in ("xbox360", "ds4"):
+            raise ValueError("Unknown virtual target")
+        validate_controller_config(config)
+        import vgamepad as vg  # pyright: ignore[reportMissingImports]
 
-        # Load the native driver only when constructing a virtual gamepad.
-        try:
-            import vgamepad as vg  # pyright: ignore[reportMissingImports]
+        self.vg = vg
+        self.gamepad_type = gamepad_type
+        self.gamepad: Any = (
+            vg.VDS4Gamepad() if gamepad_type == "ds4" else vg.VX360Gamepad()
+        )
+        self.reset_gamepad_state()
 
-            self.vg = vg
-        except ImportError as exc:
-            logger.critical(
-                "vgamepad module not found. Please install it using: pip install vgamepad"
+    def reset_gamepad_state(self) -> None:
+        self.gamepad.reset()
+        self.gamepad.update()
+
+    def apply_state(self, state: InputState) -> None:
+        ds4 = self.gamepad_type == "ds4"
+        names = DS4_BUTTONS if ds4 else XBOX_BUTTONS
+        enum = self.vg.DS4_BUTTONS if ds4 else self.vg.XUSB_BUTTON
+        prefix = "DS4_BUTTON_" if ds4 else "XUSB_GAMEPAD_"
+        # Write a complete report so releases never depend on a previous cache.
+        for name, suffix in names.items():
+            method = (
+                self.gamepad.press_button
+                if name in state.pressed
+                else self.gamepad.release_button
             )
-            raise ImportError("vgamepad module not found") from exc
-
-        # Create the virtual gamepad
-        self.setup_gamepad()
-
-        # Load button mappings
-        self.button_mapping = self.load_button_mapping()
-
-        logger.info(f"Virtual gamepad initialized: {gamepad_type}")
-
-    def setup_gamepad(self) -> bool:
-        """Setup the requested gamepad type"""
-        try:
-            if self.gamepad_type == "ds4":
-                self.gamepad = self.vg.VDS4Gamepad()
-                logger.info("Virtual DualShock4 gamepad created successfully.")
-            else:
-                self.gamepad = self.vg.VX360Gamepad()
-                logger.info("Virtual Xbox360 gamepad created successfully.")
-
-            # Reset gamepad to default state
-            self.reset_gamepad_state()
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to create virtual gamepad: {e}")
-            return False
-
-    def reset_gamepad_state(self) -> bool:
-        """Return the gamepad to its default state"""
-        try:
-            self.gamepad.reset()
-            self.gamepad.update()
-            logger.info("Gamepad state reset to default")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to reset gamepad state: {e}")
-            return False
-
-    def load_button_mapping(self) -> Dict[int, int]:
-        """Load button mapping, falling back to defaults."""
-        if self.config:
-            mapping = self._load_mapping_from_config()
-            if mapping:
-                return mapping
-
-        logger.info("Using default button mapping")
-        return self._default_button_mapping()
-
-    def _load_mapping_from_config(self) -> Optional[Dict[int, int]]:
-        """Read mapping from the configuration"""
-        mapping = {}
-        section_name = f"button_mapping_{self.gamepad_type.lower()}"
-
-        if self.config and self.config.has_section(section_name):
-            try:
-                for key, value in self.config.items(section_name):
-                    index = int(key)
-                    if self.gamepad_type == "ds4":
-                        mapping[index] = getattr(self.vg.DS4_BUTTONS, value)
-                    else:
-                        mapping[index] = getattr(self.vg.XUSB_BUTTON, value)
-                logger.info("Button mapping loaded from configuration")
-                return mapping
-            except Exception as e:
-                logger.error(f"Error processing button mapping from config: {e}")
-
-        return None
-
-    def _default_button_mapping(self) -> Dict[int, int]:
-        """Return the built-in button mapping"""
-        if self.gamepad_type == "ds4":
-            return {
-                0: self.vg.DS4_BUTTONS.DS4_BUTTON_CROSS,  # X/Cross
-                1: self.vg.DS4_BUTTONS.DS4_BUTTON_CIRCLE,  # Circle
-                2: self.vg.DS4_BUTTONS.DS4_BUTTON_SQUARE,  # Square
-                3: self.vg.DS4_BUTTONS.DS4_BUTTON_TRIANGLE,  # Triangle
-                4: self.vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_LEFT,  # L1
-                5: self.vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_RIGHT,  # R1
-                6: self.vg.DS4_BUTTONS.DS4_BUTTON_SHARE,  # Share
-                7: self.vg.DS4_BUTTONS.DS4_BUTTON_OPTIONS,  # Options
-                8: self.vg.DS4_BUTTONS.DS4_BUTTON_THUMB_LEFT,  # L3
-                9: self.vg.DS4_BUTTONS.DS4_BUTTON_THUMB_RIGHT,  # R3
-                10: self.vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_LEFT,  # L2 button
-                11: self.vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_RIGHT,  # R2 button
-            }
-        else:
-            return {
-                0: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_A,  # A
-                1: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_B,  # B
-                2: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_X,  # X
-                3: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_Y,  # Y
-                4: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER,  # LB
-                5: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER,  # RB
-                6: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_BACK,  # Back
-                7: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_START,  # Start
-                8: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_THUMB,  # Left stick click
-                9: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_THUMB,  # Right stick click
-                10: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP,  # D-pad up
-                11: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN,  # D-pad down
-                12: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT,  # D-pad left
-                13: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT,  # D-pad right
-                14: self.vg.XUSB_BUTTON.XUSB_GAMEPAD_GUIDE,  # Guide button
-            }
-
-    def get_button_mapping(self) -> Dict[int, int]:
-        """Return the current button mapping"""
-        return self.button_mapping
-
-    # ------------------------------------------------------------------
-    # Wrapper methods used by GamepadHandler
-    # ------------------------------------------------------------------
-
-    def press_button(self, *args, **kwargs) -> None:
-        self.gamepad.press_button(*args, **kwargs)
-
-    def release_button(self, *args, **kwargs) -> None:
-        self.gamepad.release_button(*args, **kwargs)
-
-    def left_joystick_float(self, *args, **kwargs) -> None:
-        self.gamepad.left_joystick_float(*args, **kwargs)
-
-    def right_joystick_float(self, *args, **kwargs) -> None:
-        self.gamepad.right_joystick_float(*args, **kwargs)
-
-    def left_trigger_float(self, *args, **kwargs) -> None:
-        self.gamepad.left_trigger_float(*args, **kwargs)
-
-    def right_trigger_float(self, *args, **kwargs) -> None:
-        self.gamepad.right_trigger_float(*args, **kwargs)
-
-    def update(self) -> None:
+            method(button=getattr(enum, prefix + suffix))
+        if ds4:
+            method = (
+                self.gamepad.press_special_button
+                if "guide" in state.pressed
+                else self.gamepad.release_special_button
+            )
+            method(special_button=self.vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS)
+            x = int("dpad_right" in state.pressed) - int("dpad_left" in state.pressed)
+            y = int("dpad_up" in state.pressed) - int("dpad_down" in state.pressed)
+            self.gamepad.directional_pad(
+                direction=getattr(
+                    self.vg.DS4_DPAD_DIRECTIONS, "DS4_BUTTON_DPAD_" + DPAD[x, y]
+                )
+            )
+        self.gamepad.left_joystick_float(
+            x_value_float=state.left_x,
+            y_value_float=-state.left_y if ds4 else state.left_y,
+        )
+        self.gamepad.right_joystick_float(
+            x_value_float=state.right_x,
+            y_value_float=-state.right_y if ds4 else state.right_y,
+        )
+        self.gamepad.left_trigger_float(value_float=state.trigger_left)
+        self.gamepad.right_trigger_float(value_float=state.trigger_right)
         self.gamepad.update()

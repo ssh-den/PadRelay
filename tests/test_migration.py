@@ -34,4 +34,4 @@ def test_functions_exist():
     assert hasattr(server_app.VirtualGamepadServer, "_handle_tcp_client")
     assert hasattr(server_app.VirtualGamepadServer, "_run_udp_server")
     assert hasattr(input_processor.GamepadHandler, "process")
-    assert hasattr(virtual_gamepad.VirtualGamepad, "load_button_mapping")
+    assert hasattr(virtual_gamepad.VirtualGamepad, "apply_state")

@@ -4,13 +4,12 @@ Configuration
 Pass an INI file with ``--config``; it is not loaded automatically. Templates
 are in ``config/``. Relative file paths are resolved from the process working
 directory, not from the INI file's directory. Use separate server and client
-files: controller mappings are interpreted on the server.
+files: physical controller profiles belong on the client.
 
 Ordinary settings use CLI values, then INI values, then defaults. Credentials
-have the special rules below. Numeric zero is currently treated as unspecified
-while merging settings: for example, ``--joystick-index 0`` does not override a
-nonzero index in the INI. Edit that INI value instead. Put comments on separate
-lines; inline comments after values are not enabled by the parser.
+have the special rules below. An explicit ``--joystick-index 0`` overrides the
+INI index. Other numeric zero settings may still use their default-merging
+behavior. Put comments on separate lines; inline comments are not enabled.
 
 Client Settings
 ---------------
@@ -39,6 +38,9 @@ Client Settings
    * - ``joystick.index``
      - ``--joystick-index``
      - ``0``; pygame device index.
+   * - ``joystick.profile``
+     - ``--controller-profile``
+     - No default; validated client JSON controller profile.
    * - ``client.update_rate``
      - ``--update-rate``
      - ``60``; input polls per second, for either transport.
@@ -83,6 +85,9 @@ Server Settings
    * - ``server.max_requests``
      - ``--max-requests``
      - ``100`` for TCP, ``6000`` for UDP when not explicitly configured.
+   * - ``server.input_timeout``
+     - INI only
+     - ``1.0`` seconds; range [0.1, 10], resets stale input independently of heartbeat.
    * - ``server.block_duration``
      - ``--block-duration``
      - ``2`` seconds; block duration for exhausted UDP buckets.
@@ -171,48 +176,16 @@ identities stop startup. Trust and renewal instructions have one home:
 Controller Mapping
 ------------------
 
-Server mapping sections are ``[button_mapping_xbox360]`` or
-``[button_mapping_ds4]``. Keys are physical button indices; values are constants
-from ``vgamepad.XUSB_BUTTON`` or ``vgamepad.DS4_BUTTONS`` respectively.
-A nonempty custom button map replaces the built-in map rather than extending it.
+Physical maps and calibration live in a versioned client JSON profile selected
+with ``--controller-profile`` or ``[joystick] profile``. Run ``padrelay-keymapper``
+on the physical-controller machine to generate it. SDL-recognized controllers
+work without a profile; an explicit profile replaces automatic capture.
+See :doc:`user_guide/key_mapper` for format ownership and calibration.
 
-.. code-block:: ini
-
-   [button_mapping_xbox360]
-   0 = XUSB_GAMEPAD_B
-   1 = XUSB_GAMEPAD_A
-
-``[axis_mapping]`` accepts ``left_stick_x``, ``left_stick_y``, ``right_stick_x``,
-``right_stick_y``, ``trigger_left`` and ``trigger_right`` as nonnegative physical
-axis indices. These entries are interpreted only by the server.
-
-.. code-block:: ini
-
-   [axis_mapping]
-   left_stick_x = 0
-   left_stick_y = 1
-   right_stick_x = 2
-   right_stick_y = 3
-   trigger_left = 4
-   trigger_right = 5
-
-With a nonempty axis map, only configured controls are applied: stick coordinates
-need both X and Y, and omitted triggers have no fallback. Trigger axes in this
-mode are converted from [-1, 1] to [0, 1]. With no axis map, the server uses axes
-0/1 for the left stick, 2/3 for the right, and the message's ``triggers`` array.
-
-``[axis_options]`` supports:
-
-* ``dead_zone``: default ``0.1``; stick values whose absolute value is at or below
-  this threshold become zero. This is a cutoff, not range rescaling.
-* ``trigger_threshold``: default ``0.1``; lower trigger values become zero.
-  The key mapper explicitly writes ``0.05``.
-* ``invert_left_y`` and ``invert_right_y``: default ``false``; inversion is
-  applied in the configured axis-mapping path, not the basic fallback path.
-
-Hats and generated ``*_hat`` sections are not currently applied to virtual
-output. The client does not load server mapping sections. For generating and
-testing a map, see :doc:`user_guide/key_mapper`.
+Protocol 2.0 deliberately rejects old server ``[button_mapping_*]``,
+``[axis_mapping]`` and ``[axis_options]`` sections. Regenerate a client profile
+and remove these sections instead of silently reusing physical indices. Server
+``[vgamepad] type`` selects only the virtual output target, not the physical model.
 
 Use ``padrelay-client --help``, ``padrelay-server --help`` or
 ``padrelay-keymapper --help`` for the installed command's complete flag list.

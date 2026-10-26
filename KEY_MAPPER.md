@@ -1,18 +1,18 @@
-# Controller Mapping
+# Controller Profiles
 
-The maintained guide is [docs/user_guide/key_mapper.rst](docs/user_guide/key_mapper.rst)
-([HTML version](https://ssh-den.github.io/PadRelay/user_guide/key_mapper.html)).
+See [the maintained guide](docs/user_guide/key_mapper.rst).
 
-Run on the machine with the physical controller:
+Run on the physical-controller machine:
 
 ```sh
-padrelay-keymapper --output controller.ini
+padrelay-keymapper --joystick-index 0 --output controller_profile.json
+padrelay-client --joystick-index 0 --controller-profile controller_profile.json
 ```
 
-The mapper uses the first pygame controller; it has no `--joystick-index` flag.
-Its other option is `--polling-interval`, defaulting to 0.1 seconds.
+The mapper uses terminal prompts, supports buttons and hats, calibrates axes,
+and previews the same normalized state used by the client. Profiles are
+device-bound JSON files saved atomically. They belong on the client.
 
-The generated file includes server defaults and mappings, but no password or
-client trust settings. Merge its mapping sections into the **server** INI;
-keep the client's network and certificate settings separate. Hat sections may
-be generated but are not currently applied by the server.
+Protocol 2.0 carries one logical snapshot. Old server INI mapping/calibration
+sections are rejected; regenerate a client profile and remove those sections.
+Update both peers together.

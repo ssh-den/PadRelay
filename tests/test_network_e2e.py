@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import pytest
 
 from padrelay.client import client_app
+from padrelay.core.controller_state import InputState
 from padrelay.protocol.constants import PROTOCOL_VERSION
 from padrelay.protocol.tcp import TCPProtocolHandler
 from padrelay.security import tls_utils
@@ -16,16 +17,8 @@ from padrelay.server import server_app
 
 PASSWORD = "integration-test-password"
 FRAMES = [
-    {
-        "buttons": [True, False],
-        "axes": [0.25, -0.5, 0.75, -1.0],
-        "triggers": [0.4, 0.8],
-    },
-    {
-        "buttons": [False, True],
-        "axes": [-0.75, 0.5, -0.25, 1.0],
-        "triggers": [0.9, 0.3],
-    },
+    InputState(frozenset({"a"}), 0.25, -0.5, 0.75, -1.0, 0.4, 0.8).to_message(),
+    InputState(frozenset({"b"}), -0.75, 0.5, -0.25, 1.0, 0.9, 0.3).to_message(),
 ]
 
 
@@ -39,6 +32,16 @@ class RecordingGamepad:
 
     def get_button_mapping(self):
         return {0: 1, 1: 2}
+
+    def apply_state(self, state):
+        self.buttons = set(state.pressed)
+        self.state = dict(
+            left=(state.left_x, state.left_y),
+            right=(state.right_x, state.right_y),
+            left_trigger=state.trigger_left,
+            right_trigger=state.trigger_right,
+        )
+        self.update()
 
     def press_button(self, button):
         self.buttons.add(button)
@@ -67,6 +70,9 @@ class RecordingGamepad:
 
 
 class ScriptedInput:
+    def is_available(self):
+        return True
+
     def __init__(self):
         self.frames = iter(FRAMES)
         self.cleaned = False
@@ -74,15 +80,9 @@ class ScriptedInput:
 
     def poll(self):
         self.polled += 1
-        frame = next(self.frames, None)
-        if frame is None:
-            return None
-        return dict(
-            copy.deepcopy(frame),
-            type="input",
-            protocol_version=PROTOCOL_VERSION,
-            hats=[],
-        )
+        # A healthy device continues reporting its held state; None is read failure.
+        frame = next(self.frames, FRAMES[-1])
+        return copy.deepcopy(frame)
 
     def cleanup(self):
         self.cleaned = True
@@ -161,14 +161,14 @@ async def transfer(server, monkeypatch, password=PASSWORD, **options):
         assert client.connected
         assert server.virtual_gamepad.frames == [
             {
-                "buttons": {1},
+                "buttons": {"a"},
                 "left": (0.25, -0.5),
                 "right": (0.75, -1.0),
                 "left_trigger": 0.4,
                 "right_trigger": 0.8,
             },
             {
-                "buttons": {2},
+                "buttons": {"b"},
                 "left": (-0.75, 0.5),
                 "right": (-0.25, 1.0),
                 "left_trigger": 0.9,
@@ -244,7 +244,7 @@ async def test_reconnect_applies_unchanged_input_immediately(
                     assert await handler.drain()
                 await asyncio.wait_for(server.virtual_gamepad.updated.wait(), 1)
                 assert len(server.virtual_gamepad.frames) == connection + 1
-                assert server.virtual_gamepad.frames[-1]["buttons"] == {1}
+                assert server.virtual_gamepad.frames[-1]["buttons"] == {"a"}
             finally:
                 if transport:
                     transport.close()

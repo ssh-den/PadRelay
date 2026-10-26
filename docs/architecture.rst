@@ -14,15 +14,15 @@ Components
    * - Module
      - Responsibility
    * - ``client.input.GamepadInput``
-     - Poll physical buttons, axes and hats into a state dictionary.
+     - Own device identity/lifecycle and normalize through SDL or a client profile.
    * - ``client.client_app.VirtualGamepadClient``
      - Connect, authenticate, send input, maintain heartbeat and reconnect.
    * - ``server.server_app.VirtualGamepadServer``
      - Own listeners, connection reservations, sessions and shutdown.
    * - ``server.input_processor.GamepadHandler``
-     - Map validated buttons/axes and update output.
+     - Cache one immutable InputState and expire stale input.
    * - ``server.virtual_gamepad.VirtualGamepad``
-     - Wrap the native driver and load button mappings.
+     - Adapt logical state to Xbox/DS4 native output; isolate vgamepad/ViGEm.
    * - ``protocol``
      - JSON framing, input validation and UDP routing.
    * - ``security``
@@ -41,16 +41,23 @@ Input Path
                                 |
    VirtualGamepadServer -> validation -> GamepadHandler -> vgamepad
 
-The client polls complete state at ``update_rate``. Buttons are boolean arrays,
-not lists of pressed button numbers. The server applies configured button
-mappings, stick dead zones, Y inversion and trigger thresholds. It caches the
-previous buttons, axes and triggers to reduce driver updates, with a forced
-update every 30 processed messages. Disconnect resets output and invalidates
-the cache so the next connection's first state is applied immediately.
+``core.controller_state.InputState`` is the one immutable logical state model.
+The client normalizes the selected device using SDL or a device-bound JSON profile,
+including calibration and thresholds. Only named logical controls are serialized.
+The server caches one state and translates it through the virtual-output adapter.
+No physical maps, raw arrays or duplicate input blocks are sent to the server.
 
-Hats are included in the message and validated, but the current output handler
-does not consume them or the mapper's generated hat sections. A DS4 target
-does not add touchpad, gyro or rumble forwarding.
+Profiles are persisted atomically by ``client.controller_profile``. Runtime device
+handles, identity and scan timing belong to ``GamepadInput``; there is no global
+state store. A disconnect closes the network session and resets output. Reopening
+matches device identity and refuses ambiguous selection. A separate input watchdog
+resets stale state independently of heartbeat, including during UDP packet loss.
+Failed native resets invalidate the state cache and are retried by the watchdog;
+an exception does not terminate its background loop. Failed report writes also
+invalidate the cache and schedule a reset, including before the first successful
+input. A successful complete report clears the pending reset.
+The adapter handles Xbox/DS4 coordinate conventions, DS4 D-pad and PS. Touchpad,
+gyro and feedback forwarding are outside this input contract.
 
 Connections
 -----------

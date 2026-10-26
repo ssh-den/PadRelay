@@ -12,7 +12,7 @@ and ViGEmBus. Requires **Python 3.11+**.
 One server process owns one virtual gamepad and admits one pending or
 authenticated client. UDP still requires a password and server certificate
 trust; legacy bearer tokens and unauthenticated UDP are rejected.
-See the [2.0.0 migration notes](CHANGELOG.md#200---2026-10-26) before upgrading older peers.
+See the [3.0.0 migration notes](CHANGELOG.md#300---2026-10-26) before upgrading older peers.
 
 ## Install
 
@@ -63,9 +63,12 @@ for UDP, even over a VPN.
 - [Security boundaries](docs/security.rst) and [wire protocol](docs/protocol.rst)
 - [Development](docs/development.rst) and [contributing](docs/contributing.rst)
 
-To configure a controller, run `padrelay-keymapper --output controller.ini` and
-merge its mapping sections into the **server** configuration. Hat-only D-pads
-are not currently applied to virtual output; see the mapping guide for limits.
+SDL-recognized controllers map automatically. For custom bindings or calibration,
+run `padrelay-keymapper --joystick-index 0 --output controller_profile.json`, then
+select it with `padrelay-client --controller-profile controller_profile.json`.
+Profiles belong on the client. Protocol 2.0 requires updating both peers;
+legacy server mapping/calibration sections are rejected. D-pad hats and DS4 PS
+are handled through the canonical state and output adapter.
 
 Logs default to `~/.padrelay/logs/padrelay.log`. Set `PADRELAY_DEBUG=1` for
 diagnostics or `PADRELAY_LOG_DIR` to change the directory. The CLI has no

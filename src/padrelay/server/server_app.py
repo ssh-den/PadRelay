@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..core.logging_utils import get_logger
-from ..protocol.constants import HEARTBEAT_INTERVAL
+from ..protocol.constants import HEARTBEAT_INTERVAL, PROTOCOL_VERSION
 from ..protocol.messages import validate_input_message
 from ..protocol.tcp import TCPProtocolHandler
 from ..protocol.udp import UDPServerProtocol
@@ -202,6 +202,7 @@ class VirtualGamepadServer:
 
             # Start task to monitor shutdown event
             shutdown_task = asyncio.create_task(self._monitor_shutdown())
+            input_watchdog = asyncio.create_task(self._watch_input())
 
             async with server:
                 try:
@@ -211,6 +212,10 @@ class VirtualGamepadServer:
                 finally:
                     if not shutdown_task.done():
                         shutdown_task.cancel()
+                    input_watchdog.cancel()
+                    await asyncio.gather(
+                        shutdown_task, input_watchdog, return_exceptions=True
+                    )
 
         except OSError as e:
             logger.error(f"Failed to start TCP server: {e}")
@@ -247,7 +252,7 @@ class VirtualGamepadServer:
                 await handler.send_message(
                     {
                         "type": "error",
-                        "protocol_version": "1.0",
+                        "protocol_version": PROTOCOL_VERSION,
                         "message": "Another client is already connected or admission is limited.",
                     }
                 )
@@ -265,7 +270,10 @@ class VirtualGamepadServer:
                 return
             self.tracker.authenticate(addr)
             authenticated = True
-            result: dict = {"type": "auth_success", "protocol_version": "1.0"}
+            result: dict = {
+                "type": "auth_success",
+                "protocol_version": PROTOCOL_VERSION,
+            }
             if self.protocol == "udp":
                 # This listener always uses verified TLS on the client side.
                 session = UDPSession.create(addr[0])
@@ -284,7 +292,7 @@ class VirtualGamepadServer:
                     break
                 if message.get("type") == "heartbeat":
                     await handler.send_message(
-                        {"type": "heartbeat_ack", "protocol_version": "1.0"}
+                        {"type": "heartbeat_ack", "protocol_version": PROTOCOL_VERSION}
                     )
                     await handler.drain()
                 elif self.protocol == "tcp" and message.get("type") == "input":
@@ -306,10 +314,13 @@ class VirtualGamepadServer:
                 self.active_clients.discard(writer)
                 if admitted:
                     self.tracker.disconnect(addr)
-                if authenticated:
-                    self.gamepad_handler.reset()
                 if task is not None:
                     self.client_tasks.discard(task)
+                if authenticated:
+                    try:
+                        self.gamepad_handler.reset()
+                    except Exception:
+                        logger.exception("Disconnect reset failed; watchdog will retry")
 
     async def _authenticate_client(self, handler: TCPProtocolHandler) -> bool:
         if not self.password:
@@ -318,7 +329,7 @@ class VirtualGamepadServer:
         await handler.send_message(
             {
                 "type": "auth_challenge",
-                "protocol_version": "1.0",
+                "protocol_version": PROTOCOL_VERSION,
                 "challenge": challenge,
                 "salt": self.authenticator.salt,
                 "iterations": self.authenticator.iterations,
@@ -329,14 +340,14 @@ class VirtualGamepadServer:
         valid = (
             isinstance(response, dict)
             and response.get("type") == "auth_response"
-            and response.get("protocol_version") == "1.0"
+            and response.get("protocol_version") == PROTOCOL_VERSION
             and self.authenticator.verify_tcp_response(
                 challenge, response.get("response", "")
             )
         )
         if not valid:
             await handler.send_message(
-                {"type": "auth_failed", "protocol_version": "1.0"}
+                {"type": "auth_failed", "protocol_version": PROTOCOL_VERSION}
             )
             await handler.drain()
         return valid
@@ -364,6 +375,21 @@ class VirtualGamepadServer:
             await self.server.wait_closed()
 
         logger.info("All connections closed")
+
+    async def _watch_input(self) -> None:
+        failed = False
+        while not self.shutdown_event.is_set():
+            try:
+                self.gamepad_handler.expire_input()
+            except Exception:
+                if not failed:
+                    logger.exception("Input watchdog reset failed; retrying")
+                failed = True
+            else:
+                if failed:
+                    logger.info("Input watchdog recovered")
+                failed = False
+            await asyncio.sleep(0.05)
 
     async def _run_udp_server(self) -> None:
         """Start UDP input and TLS control listeners on the same port number."""

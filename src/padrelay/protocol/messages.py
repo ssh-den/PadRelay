@@ -3,6 +3,7 @@
 import json
 from datetime import datetime
 
+from ..core.controller_state import InputState
 from ..core.exceptions import ProtocolError
 from ..core.logging_utils import get_logger
 from .constants import PROTOCOL_VERSION
@@ -13,13 +14,17 @@ logger = get_logger(__name__)
 class BaseMessage:
     """Base message class"""
 
-    def __init__(self, msg_type):
+    def __init__(self, msg_type, *, payload=None):
         """Create a message of ``msg_type``"""
-        self.data = {
-            "type": msg_type,
-            "protocol_version": PROTOCOL_VERSION,
-            "timestamp": datetime.now().isoformat(),
-        }
+        self.data = (
+            payload
+            if payload is not None
+            else {
+                "type": msg_type,
+                "protocol_version": PROTOCOL_VERSION,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def to_json(self):
         """Return a JSON representation"""
@@ -62,31 +67,16 @@ class BaseMessage:
 
 
 class InputMessage(BaseMessage):
-    """Gamepad state message"""
+    """Serialize exactly one canonical state; physical layouts never reach the wire."""
 
-    def __init__(self, buttons=None, axes=None, hats=None, triggers=None):
-        """Create an input message."""
-        super().__init__("input")
-        self.data["buttons"] = buttons or []
-        self.data["axes"] = axes or []
-        self.data["hats"] = hats or []
-        if triggers:
-            self.data["triggers"] = triggers
+    def __init__(self, state: InputState | None = None):
+        super().__init__(
+            "input", payload=(state if state is not None else InputState()).to_message()
+        )
 
     @classmethod
     def from_dict(cls, data):
-        """Build an input message from ``data``"""
-        msg = cls(
-            buttons=data.get("buttons", []),
-            axes=data.get("axes", []),
-            hats=data.get("hats", []),
-            triggers=data.get("triggers"),
-        )
-        # Copy any extra fields
-        for key, value in data.items():
-            if key not in msg.data:
-                msg.data[key] = value
-        return msg
+        return cls(InputState.from_message(data))
 
 
 class HeartbeatMessage(BaseMessage):
@@ -197,44 +187,7 @@ class ErrorMessage(BaseMessage):
 def validate_input_message(message):
     """Return ``True`` if ``message`` is a valid input payload"""
     try:
-        if message.get("type") != "input":
-            return False
-
-        # Validate buttons (array of booleans)
-        buttons = message.get("buttons", [])
-        if not isinstance(buttons, list) or not all(
-            isinstance(b, bool) for b in buttons
-        ):
-            return False
-
-        # Validate axes (array of floats between -1.0 and 1.0)
-        axes = message.get("axes", [])
-        if not isinstance(axes, list) or not all(
-            isinstance(a, (int, float)) for a in axes
-        ):
-            return False
-        if not all(-1.0 <= a <= 1.0 for a in axes):
-            return False
-
-        # If triggers are present, validate them (floats between 0.0 and 1.0)
-        triggers = message.get("triggers", [])
-        if (
-            not isinstance(triggers, list)
-            or not all(isinstance(t, (int, float)) for t in triggers)
-            or not all(0.0 <= t <= 1.0 for t in triggers)
-        ):
-            return False
-
-        # JSON represents hat pairs as lists; local callers may pass tuples.
-        hats = message.get("hats", [])
-        if (
-            not isinstance(hats, list)
-            or not all(isinstance(h, (tuple, list)) and len(h) == 2 for h in hats)
-            or not all(type(v) is int and v in (-1, 0, 1) for h in hats for v in h)
-        ):
-            return False
-
+        InputState.from_message(message)
         return True
-
-    except Exception:
+    except (ValueError, TypeError, OverflowError):
         return False

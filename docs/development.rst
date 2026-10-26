@@ -129,7 +129,7 @@ and publishing. All checks must pass for the release to proceed.
 The package version must have a dated changelog entry. The workflow checks this
 before building and validates the distribution metadata before upload.
 The workflow uploads to PyPI using OIDC Trusted Publishing before creating the
-GitHub release and its ``v<version>`` tag (``v2.0.0`` for ``2.0.0``) at the
+GitHub release and its ``v<version>`` tag (``v3.0.0`` for ``3.0.0``) at the
 commit selected for the run. No PyPI API token or repository secret is required.
 
 See the `PyPI Trusted Publisher setup guide

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning].
 
 ## Unreleased
 
+## [3.0.0] - 2026-10-26
+
+### Changed
+- Protocol 2.0 carries one complete canonical input snapshot with named controls.
+  Physical arrays, duplicate normalized blocks and legacy input fallback are removed.
+  Update both peers together; the encrypted UDP envelope remains version 2.
+- Physical mapping and calibration now belong to validated, device-bound client
+  JSON profiles. Regenerate profiles with the mapper and remove legacy server
+  button/axis mapping and calibration sections, which now cause startup errors.
+- The mapper supports explicit device selection, portable terminal input,
+  retries/skips, hat directions, axis calibration and a live normalized preview.
+
+### Fixed
+- Recognize physical controls through SDL rather than guessing indices from the
+  controller name/counts. Fix Xbox One S/macOS triggers and button positions.
+- Reopen uniquely matching controllers after reconnect, including index changes;
+  ambiguous matches are not selected automatically. Explicit CLI index zero wins.
+- Apply Xbox/DS4 coordinate conventions, DS4 D-pad diagonals and PS special buttons
+  in the isolated virtual-output adapter.
+- Close sessions on controller loss and reset stale output independently of
+  heartbeat using the server input watchdog.
+- Retry failed native resets without stopping the watchdog or retaining a stale
+  output cache. Release connection bookkeeping even when native reset fails.
+  Schedule a reset after failed report writes, even before the first valid input.
+- Calibrate both stick endpoints independently around neutral, preserving the
+  full range with offset centers and asymmetric travel.
+- Capture short D-pad hat events and cancel neutral waits when terminal input closes.
+- Validate canonical snapshots and bound outbound TCP framing. Add protocol load,
+  replay/forgery, reconnect, profile persistence and watchdog regressions.
+
 ## [2.0.0] - 2026-10-26
 
 ### Changed
@@ -88,5 +118,6 @@ and this project adheres to [Semantic Versioning].
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 <!-- Versions -->
+[3.0.0]: https://github.com/ssh-den/PadRelay/releases/tag/v3.0.0
 [2.0.0]: https://github.com/ssh-den/PadRelay/releases/tag/v2.0.0
 [1.1.0]: https://github.com/ssh-den/PadRelay/releases/tag/v1.1.0

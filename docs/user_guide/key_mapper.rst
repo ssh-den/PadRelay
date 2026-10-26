@@ -1,78 +1,67 @@
-Controller Mapping
-==================
+Controller Profiles
+===================
 
-Run the mapper on the machine with the physical controller:
-
-.. code-block:: bash
-
-   padrelay-keymapper --output controller.ini
-
-It opens the first pygame controller, asks for the virtual gamepad type, records
-buttons and axes, then offers a review before saving. Follow the movement
-prompts and return controls to neutral between captures. Enter-key skipping is
-read through pygame events, so it may depend on the window/event focus.
-
-The supported flags are ``--output`` (default ``controller_config.ini``) and
-``--polling-interval`` (default ``0.1`` seconds). There is no mapper
-``--joystick-index`` flag. Disconnect other controllers if the first detected
-device is not the one you need.
-
-Apply the Result on the Server
-------------------------------
-
-The generated INI contains ``[server]`` defaults, ``[vgamepad]``, button and axis
-maps, and axis options. It is not a complete client configuration and contains
-no password or certificate trust configuration. Its default server host is
-``127.0.0.1``.
-
-Copy the mapping sections into an existing server INI, or add the server's
-address, credentials and transport settings to the generated file before use:
+Recognized SDL GameControllers work automatically. To calibrate one or map an
+unknown physical device, run this on the client machine:
 
 .. code-block:: bash
 
-   padrelay-server --config controller.ini
+   padrelay-keymapper --joystick-index 0 --output controller_profile.json
+   padrelay-client --controller-profile controller_profile.json
 
-Keep the client's network, trust and joystick settings in its own INI. The
-client does not apply these mappings. The mapper writes ``trigger_threshold =
-0.05``; the server fallback without that setting is ``0.1``.
+Select the same physical device with ``--joystick-index`` in both commands.
+The mapper supports ``--polling-interval`` in (0, 0.1] seconds, default 0.01.
+It has terminal input on Windows, Linux and macOS; no pygame window focus is
+required. Return controls to neutral, press Enter, and follow each prompt.
+Enter during capture stops that attempt; ``r`` retries; ``s`` explicitly leaves
+the control unmapped. Every D-pad direction is captured independently, including
+hat controls. A diagonal is not accepted as a cardinal calibration direction.
 
-Adjust a Mapping
-----------------
+Axis neutral is sampled before the countdown. Move to full travel and hold;
+the mapper records the largest change, its sign and the resting value. For
+sticks it then asks for the opposite direction on the same axis. Each side is
+normalized against its own endpoint, preserving full travel with an offset
+center or asymmetric range. Triggers need only their released and fully pressed
+positions. This supports reversed axes and triggers resting at -1, 0 or +1.
+After capture, test the normalized controls in the preview before confirming the save. Ctrl+C or
+closed terminal input cancels without replacing an existing profile.
 
-Button keys are physical indices and values are virtual button constants.
-For example, swapping the first two buttons on an Xbox target:
+Profile Ownership and Validation
+--------------------------------
 
-.. code-block:: ini
+Profiles are versioned JSON files owned by the client. They bind physical
+buttons/hats/axes to logical controls, and include the GUID, name, platform and
+input counts of the device. Calibration thresholds are stored in this file:
+``dead_zone`` defaults to 0.1; ``trigger_threshold`` defaults to 0.05.
+The file is validated on load and saved through an atomic replacement.
+Axis bindings store ``rest`` and ``end``; stick bindings additionally require
+``opposite``. Stick endpoints must lie on opposite sides of neutral, each at
+least 0.3 raw units away. Regenerate preliminary profiles missing ``opposite``;
+the client does not guess an unmeasured endpoint.
 
-   [button_mapping_xbox360]
-   0 = XUSB_GAMEPAD_B
-   1 = XUSB_GAMEPAD_A
+The profile must explicitly bind or skip every logical control. A skipped
+control is neutral, not a fallback to a guessed index. Physical indices must
+fit the recorded device. The client refuses a mismatched identity or malformed
+profile. GUIDs identify a model/mode rather than a unique unit: ambiguous
+reconnection among identical devices requires explicit selection and restart.
 
-A custom button map replaces the defaults, so include the other buttons you
-need. Axis maps use ``left_stick_x/y``, ``right_stick_x/y`` and
-``trigger_left/right``. Stick pairs need both coordinates; trigger axes are
-expected in [-1, 1]. Y inversion applies in this mapped path.
+Set ``[joystick] profile = controller_profile.json`` in the client INI as an
+alternative to the CLI flag. Paths are relative to the working directory.
 
-.. code-block:: ini
+Migration and Output
+--------------------
 
-   [axis_options]
-   dead_zone = 0.15
-   trigger_threshold = 0.05
-   invert_left_y = true
-   invert_right_y = false
+Protocol 2.0 does not accept the old physical arrays or server INI maps.
+Regenerate the profile on the client rather than copying old mapping sections.
+Remove ``[button_mapping_*]``, ``[axis_mapping]`` and ``[axis_options]`` from the
+server INI; they now cause an explicit startup error. Keep network, credentials,
+TLS and ``[vgamepad]`` settings in their respective INI files.
 
-These are hard cutoffs, not response curves. Full field names, defaults and
-fallback rules are in :doc:`../configuration`.
+The server receives only logical input. Its output adapter supports Xbox buttons
+and DS4 ordinary buttons, D-pad diagonals/neutral, and Guide mapped to PS through
+the native special-button API. Stick Y is positive-up in the protocol and
+converted for the target. Touchpad, gyro and feedback forwarding are not part
+of this controller-state contract.
 
-Known Limits and Verification
------------------------------
-
-The mapper may record D-pad hats in a ``*_hat`` section, but the server currently
-does not read those sections or apply incoming hats to virtual output. A D-pad
-reported as ordinary mapped buttons can work; a hat-only D-pad needs code
-support, not another certificate or network setting. DS4 mode does not add
-touchpad or gyro support.
-
-Test buttons, sticks and triggers in Windows ``joy.cpl`` after copying the
-mapping. When sharing it, include the controller model, driver mode, OS and
-which inputs you verified; remove credentials and machine-specific paths.
+Check the final virtual output in Windows ``joy.cpl``. Include the physical
+model, OS and driver mode when sharing a profile; never include credentials.

@@ -1,91 +1,79 @@
-import sys
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
+
+from padrelay.core.controller_state import InputState
+from padrelay.server.virtual_gamepad import (
+    DPAD,
+    DS4_BUTTONS,
+    XBOX_BUTTONS,
+    VirtualGamepad,
+)
 
 
-class DummyEnum:
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+class Names:
+    def __getattr__(self, name):
+        return name
 
 
-class DummyGamepad:
-    def __init__(self):
-        self.reset_called = False
-        self.updated = False
-
-    def reset(self):
-        self.reset_called = True
-
-    def update(self):
-        self.updated = True
-
-    # Stub methods used by GamepadHandler
-    def press_button(self, button):
-        pass
-
-    def release_button(self, button):
-        pass
-
-    def left_joystick_float(self, **kwargs):
-        pass
-
-    def right_joystick_float(self, **kwargs):
-        pass
-
-    def left_trigger_float(self, **kwargs):
-        pass
-
-    def right_trigger_float(self, **kwargs):
-        pass
-
-
-class DummyVG:
-    XUSB_BUTTON = DummyEnum(
-        XUSB_GAMEPAD_A=1,
-        XUSB_GAMEPAD_B=2,
-        XUSB_GAMEPAD_X=3,
-        XUSB_GAMEPAD_Y=4,
-        XUSB_GAMEPAD_LEFT_SHOULDER=5,
-        XUSB_GAMEPAD_RIGHT_SHOULDER=6,
-        XUSB_GAMEPAD_BACK=7,
-        XUSB_GAMEPAD_START=8,
-        XUSB_GAMEPAD_LEFT_THUMB=9,
-        XUSB_GAMEPAD_RIGHT_THUMB=10,
-        XUSB_GAMEPAD_DPAD_UP=11,
-        XUSB_GAMEPAD_DPAD_DOWN=12,
-        XUSB_GAMEPAD_DPAD_LEFT=13,
-        XUSB_GAMEPAD_DPAD_RIGHT=14,
-        XUSB_GAMEPAD_GUIDE=15,
+def virtual(target):
+    adapter = VirtualGamepad.__new__(VirtualGamepad)
+    adapter.gamepad_type = target
+    adapter.gamepad = Mock()
+    adapter.vg = SimpleNamespace(
+        XUSB_BUTTON=Names(),
+        DS4_BUTTONS=Names(),
+        DS4_SPECIAL_BUTTONS=Names(),
+        DS4_DPAD_DIRECTIONS=Names(),
     )
-    DS4_BUTTONS = DummyEnum(
-        DS4_BUTTON_CROSS=1,
-        DS4_BUTTON_CIRCLE=2,
-        DS4_BUTTON_SQUARE=3,
-        DS4_BUTTON_TRIANGLE=4,
-        DS4_BUTTON_SHOULDER_LEFT=5,
-        DS4_BUTTON_SHOULDER_RIGHT=6,
-        DS4_BUTTON_SHARE=7,
-        DS4_BUTTON_OPTIONS=8,
-        DS4_BUTTON_THUMB_LEFT=9,
-        DS4_BUTTON_THUMB_RIGHT=10,
-        DS4_BUTTON_TRIGGER_LEFT=11,
-        DS4_BUTTON_TRIGGER_RIGHT=12,
+    return adapter
+
+
+@pytest.mark.parametrize("target", ["xbox360", "ds4"])
+def test_all_buttons_and_releases(target):
+    adapter = virtual(target)
+    mapping = DS4_BUTTONS if target == "ds4" else XBOX_BUTTONS
+    adapter.apply_state(InputState(frozenset(mapping)))
+    assert adapter.gamepad.press_button.call_count == len(mapping)
+    adapter.gamepad.reset_mock()
+    adapter.apply_state(InputState())
+    assert adapter.gamepad.release_button.call_count == len(mapping)
+    adapter.gamepad.press_button.assert_not_called()
+
+
+@pytest.mark.parametrize("x,y", list(DPAD))
+def test_ds4_hat_all_directions_and_neutral(x, y):
+    pressed = set()
+    if x:
+        pressed.add("dpad_right" if x > 0 else "dpad_left")
+    if y:
+        pressed.add("dpad_up" if y > 0 else "dpad_down")
+    adapter = virtual("ds4")
+    adapter.apply_state(InputState(frozenset(pressed)))
+    adapter.gamepad.directional_pad.assert_called_once_with(
+        direction="DS4_BUTTON_DPAD_" + DPAD[x, y]
     )
 
-    class VX360Gamepad(DummyGamepad):
-        pass
 
-    class VDS4Gamepad(DummyGamepad):
-        pass
+def test_ds4_guide_uses_special_api_and_opposite_hat_cancels():
+    adapter = virtual("ds4")
+    adapter.apply_state(InputState(frozenset({"guide", "dpad_up", "dpad_down"})))
+    adapter.gamepad.press_special_button.assert_called_once_with(
+        special_button="DS4_SPECIAL_BUTTON_PS"
+    )
+    adapter.gamepad.directional_pad.assert_called_with(direction="DS4_BUTTON_DPAD_NONE")
+    adapter.apply_state(InputState())
+    adapter.gamepad.release_special_button.assert_called_with(
+        special_button="DS4_SPECIAL_BUTTON_PS"
+    )
 
 
-def test_default_button_mapping(monkeypatch):
-    sys.modules["vgamepad"] = DummyVG()
-    from padrelay.server.virtual_gamepad import VirtualGamepad
-
-    vg = VirtualGamepad("xbox360")
-    mapping = vg.get_button_mapping()
-    assert 0 in mapping and mapping[0] == DummyVG.XUSB_BUTTON.XUSB_GAMEPAD_A
-
-    vg_ds4 = VirtualGamepad("ds4")
-    mapping_ds4 = vg_ds4.get_button_mapping()
-    assert 0 in mapping_ds4 and mapping_ds4[0] == DummyVG.DS4_BUTTONS.DS4_BUTTON_CROSS
+@pytest.mark.parametrize("target,y", [("xbox360", 1.0), ("ds4", -1.0)])
+def test_target_coordinates_and_analog_triggers(target, y):
+    adapter = virtual(target)
+    adapter.apply_state(InputState(left_y=1.0, trigger_left=1.0))
+    adapter.gamepad.left_joystick_float.assert_called_once_with(
+        x_value_float=0.0, y_value_float=y
+    )
+    adapter.gamepad.left_trigger_float.assert_called_once_with(value_float=1.0)

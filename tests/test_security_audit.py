@@ -154,136 +154,54 @@ class TestRateLimitingSecurity:
 
 
 class TestInputValidationSecurity:
-    """Test input validation to prevent malformed data attacks"""
+    """Mutate complete canonical snapshots so each rejection tests its own boundary."""
 
     def test_input_validation_rejects_invalid_type(self):
-        """Verify input validation rejects wrong message types"""
-        message = {"type": "not_input", "buttons": [], "axes": []}
-        assert validate_input_message(message) is False
+        from padrelay.core.controller_state import InputState
 
-    def test_input_validation_rejects_invalid_buttons(self):
-        """Verify button validation rejects non-boolean values"""
-        # Non-list buttons
-        assert (
-            validate_input_message(
-                {"type": "input", "buttons": "not_a_list", "axes": []}
-            )
-            is False
-        )
+        packet = InputState().to_message()
+        packet["type"] = "heartbeat"
+        assert not validate_input_message(packet)
 
-        # Non-boolean button values
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [True, 1, False],  # 1 is not bool
-                    "axes": [],
-                }
-            )
-            is False
-        )
+    @pytest.mark.parametrize("value", ["not-a-map", [True, False], None, False])
+    def test_input_validation_rejects_invalid_buttons(self, value):
+        from padrelay.core.controller_state import InputState
 
-    def test_input_validation_rejects_out_of_range_axes(self):
-        """Verify axis validation enforces [-1.0, 1.0] range"""
-        # Axis value too high
-        assert (
-            validate_input_message(
-                {"type": "input", "buttons": [], "axes": [0.5, 1.5]}  # 1.5 out of range
-            )
-            is False
-        )
+        packet = InputState().to_message()
+        packet["buttons"] = value
+        assert not validate_input_message(packet)
 
-        # Axis value too low
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [-2.0, 0.0],  # -2.0 out of range
-                }
-            )
-            is False
-        )
+    @pytest.mark.parametrize("value", [-2.0, 1.5, float("nan"), float("inf"), True])
+    def test_input_validation_rejects_out_of_range_axes(self, value):
+        from padrelay.core.controller_state import InputState
 
-    def test_input_validation_rejects_invalid_triggers(self):
-        """Verify trigger validation enforces [0.0, 1.0] range"""
-        # Negative trigger value
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [],
-                    "triggers": [-0.1, 0.5],  # Negative not allowed
-                }
-            )
-            is False
-        )
+        packet = InputState().to_message()
+        packet["axes"]["left_x"] = value
+        assert not validate_input_message(packet)
 
-        # Trigger value too high
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [],
-                    "triggers": [0.5, 1.5],  # 1.5 out of range
-                }
-            )
-            is False
-        )
+    @pytest.mark.parametrize("value", [-0.1, 1.5, float("nan"), False])
+    def test_input_validation_rejects_invalid_triggers(self, value):
+        from padrelay.core.controller_state import InputState
 
-    def test_input_validation_rejects_invalid_hats(self):
-        """Verify hat validation enforces valid values (-1, 0, 1)"""
-        # Invalid hat x value
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [],
-                    "hats": [(2, 0)],  # 2 is invalid
-                }
-            )
-            is False
-        )
+        packet = InputState().to_message()
+        packet["triggers"]["left"] = value
+        assert not validate_input_message(packet)
 
-        # Invalid hat y value
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [],
-                    "hats": [(0, -2)],  # -2 is invalid
-                }
-            )
-            is False
-        )
+    def test_input_validation_rejects_physical_hats(self):
+        from padrelay.core.controller_state import InputState
 
-        # Hat pairs must have exactly two coordinates.
-        assert (
-            validate_input_message(
-                {
-                    "type": "input",
-                    "buttons": [],
-                    "axes": [],
-                    "hats": [[0]],
-                }
-            )
-            is False
-        )
+        packet = InputState().to_message()
+        packet["hats"] = [[0, 1]]
+        assert not validate_input_message(packet)
 
     def test_input_validation_accepts_valid_message(self):
-        """Verify valid input messages pass validation"""
-        message = {
-            "type": "input",
-            "buttons": [True, False, True],
-            "axes": [0.5, -0.3, 0.0, 1.0],
-            "triggers": [0.8, 0.2],
-            "hats": [(0, 1), (-1, 0)],
-        }
-        assert validate_input_message(message) is True
+        from padrelay.core.controller_state import InputState
+
+        assert validate_input_message(
+            InputState(
+                frozenset({"a", "dpad_up"}), left_x=0.5, trigger_left=0.8
+            ).to_message()
+        )
 
 
 class TestProtocolVersionSecurity:
@@ -293,7 +211,7 @@ class TestProtocolVersionSecurity:
         """Verify protocol version is defined"""
         from padrelay.protocol.constants import PROTOCOL_VERSION
 
-        assert PROTOCOL_VERSION == "1.0"
+        assert PROTOCOL_VERSION == "2.0"
 
     def test_message_includes_protocol_version(self):
         """Verify all messages include protocol version"""
@@ -301,7 +219,7 @@ class TestProtocolVersionSecurity:
 
         msg = InputMessage()
         assert "protocol_version" in msg.data
-        assert msg.data["protocol_version"] == "1.0"
+        assert msg.data["protocol_version"] == "2.0"
 
         hb = HeartbeatMessage()
         assert "protocol_version" in hb.data

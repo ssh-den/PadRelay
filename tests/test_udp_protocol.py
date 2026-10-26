@@ -5,11 +5,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from padrelay.core.controller_state import InputState
 from padrelay.protocol.udp import UDPServerProtocol
 from padrelay.security.udp_session import UDPSession
 
 IP = "127.0.0.1"
-MESSAGE = {"type": "input", "protocol_version": "1.0", "buttons": [True], "axes": [0.5]}
+MESSAGE = InputState(frozenset({"a"}), left_x=0.5).to_message()
 
 
 @pytest.fixture
@@ -98,7 +99,7 @@ def test_nonce_exhaustion_never_wraps(channel):
 def test_reordered_old_state_cannot_override_newer_input(channel):
     _, client, protocol, handler, _ = channel
     older = client.encode(MESSAGE)
-    newer_message = dict(MESSAGE, buttons=[False])
+    newer_message = InputState().to_message()
     newer = client.encode(newer_message)
     protocol.datagram_received(newer, (IP, 1))
     protocol.datagram_received(older, (IP, 1))

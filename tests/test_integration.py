@@ -6,7 +6,7 @@ import contextlib
 import pytest
 
 from padrelay.client import client_app
-from padrelay.protocol.constants import PROTOCOL_VERSION
+from padrelay.core.controller_state import InputState
 from padrelay.security import tls_utils
 from padrelay.security.auth import Authenticator
 from padrelay.server import server_app
@@ -52,6 +52,11 @@ class DummyVirtualGamepad:
     def get_button_mapping(self):
         return self.button_mapping
 
+    def apply_state(self, state):
+        for name in state.pressed:
+            self.gamepad.press_button(name)
+        self.gamepad.update()
+
     def reset_gamepad_state(self):
         self.gamepad.reset()
 
@@ -78,6 +83,9 @@ class DummyVirtualGamepad:
 
 
 class DummyGamepadInput:
+    def is_available(self):
+        return True
+
     def __init__(self):
         self.polled = 0
         self.cleanup_called = False
@@ -86,14 +94,7 @@ class DummyGamepadInput:
         self.polled += 1
         if self.polled > 1:
             return None
-        return {
-            "type": "input",
-            "protocol_version": PROTOCOL_VERSION,
-            "timestamp": "now",
-            "buttons": [True],
-            "axes": [0.0, 0.0],
-            "hats": [],
-        }
+        return InputState(frozenset({"a"})).to_message()
 
     def cleanup(self):
         self.cleanup_called = True

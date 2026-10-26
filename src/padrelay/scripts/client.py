@@ -22,7 +22,10 @@ async def async_main():
     args, config_obj = parse_client_args()
 
     # Initialize gamepad input
-    gamepad = GamepadInput(args.joystick_index)
+    gamepad = GamepadInput(
+        args.joystick_index,
+        profile_path=Path(args.controller_profile) if args.controller_profile else None,
+    )
     if not gamepad.initialize():
         logger.error("Failed to initialize gamepad. Exiting.")
         return 1

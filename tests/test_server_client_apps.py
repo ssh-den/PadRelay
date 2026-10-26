@@ -4,22 +4,20 @@ import contextlib
 import pytest
 
 from padrelay.client import client_app
+from padrelay.core.controller_state import InputState
 from padrelay.protocol.tcp import TCPProtocolHandler
 from padrelay.server import server_app
 
 
 class DummyGamepadInput:
+    def is_available(self):
+        return True
+
     def __init__(self):
         self.cleaned = False
 
     def poll(self):
-        return {
-            "type": "input",
-            "protocol_version": "1.0",
-            "buttons": [],
-            "axes": [],
-            "hats": [],
-        }
+        return InputState().to_message()
 
     def cleanup(self):
         self.cleaned = True
@@ -37,6 +35,9 @@ class DummyVirtualGamepad:
 
 
 class DummyGamepadHandler:
+    def expire_input(self):
+        pass
+
     def __init__(self, *a, **k):
         self.received = []
         self.gamepad = a[0]
@@ -101,7 +102,7 @@ async def test_tcp_auth_failure(monkeypatch):
     challenge = await handler.read_message()
     assert challenge["type"] == "auth_challenge"
     await handler.send_message(
-        {"type": "auth_response", "protocol_version": "1.0", "response": "bad"}
+        {"type": "auth_response", "protocol_version": "2.0", "response": "bad"}
     )
     await handler.drain()
     result = await handler.read_message()

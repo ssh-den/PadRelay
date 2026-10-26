@@ -4,6 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import sys
+import tomllib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -14,8 +15,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 project = "PadRelay"
 copyright = "2025, ssh-den"
 author = "ssh-den"
-release = "2.0.0"
-version = "2.0.0"
+release = tomllib.loads(
+    (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+)["project"]["version"]
+version = release
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -110,7 +110,7 @@ async def test_network_challenge_rejected_before_kdf_dispatch(monkeypatch):
     handler.read_message = AsyncMock(
         return_value={
             "type": "auth_challenge",
-            "protocol_version": "1.0",
+            "protocol_version": "2.0",
             "challenge": "c" * 32,
             "salt": "a" * 32,
             "iterations": 2_000_000_000,
@@ -194,7 +194,7 @@ async def test_pending_connection_reserved_before_challenge_and_released(monkeyp
             await first.send_message(
                 {
                     "type": "auth_response",
-                    "protocol_version": "1.0",
+                    "protocol_version": "2.0",
                     "response": auth.generate_tcp_response(challenge["challenge"]),
                 }
             )
@@ -251,9 +251,9 @@ async def test_udp_session_revoked_when_tls_control_disconnects(monkeypatch):
         assert await client._tcp_auth(handler)
         session = client.udp_session
         assert session.session_id in server.udp_sessions
-        packet = session.encode(
-            {"type": "input", "protocol_version": "1.0", "buttons": [True]}
-        )
+        from padrelay.core.controller_state import InputState
+
+        packet = session.encode(InputState(frozenset({"a"})).to_message())
         handler.close()
         await handler.wait_closed()
         await asyncio.wait_for(asyncio.gather(*list(server.client_tasks)), 1)
@@ -292,7 +292,7 @@ async def test_tcp_failed_attempt_budget_is_shared_across_ports(monkeypatch):
         await handler.send_message(
             {
                 "type": "auth_response",
-                "protocol_version": "1.0",
+                "protocol_version": "2.0",
                 "response": "incorrect",
             }
         )

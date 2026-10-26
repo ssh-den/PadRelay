@@ -21,6 +21,38 @@ if "pygame" not in sys.modules:
         init=lambda: None,
         quit=lambda: None,
         joystick=joystick,
-        event=types.SimpleNamespace(pump=lambda: None),
+        event=types.SimpleNamespace(pump=lambda: None, get=lambda: []),
+        error=RuntimeError,
+        JOYDEVICEREMOVED=1542,
+        JOYBUTTONDOWN=1539,
+        JOYHATMOTION=1538,
     )
+    for index, name in enumerate(
+        ("LEFTX", "LEFTY", "RIGHTX", "RIGHTY", "TRIGGERLEFT", "TRIGGERRIGHT")
+    ):
+        setattr(pygame_stub, f"CONTROLLER_AXIS_{name}", index)
+    for index, name in enumerate(
+        (
+            "A",
+            "B",
+            "X",
+            "Y",
+            "BACK",
+            "GUIDE",
+            "START",
+            "LEFTSTICK",
+            "RIGHTSTICK",
+            "LEFTSHOULDER",
+            "RIGHTSHOULDER",
+            "DPAD_UP",
+            "DPAD_DOWN",
+            "DPAD_LEFT",
+            "DPAD_RIGHT",
+        )
+    ):
+        setattr(pygame_stub, f"CONTROLLER_BUTTON_{name}", index)
+    controller = types.SimpleNamespace(
+        init=lambda: None, is_controller=lambda i: False, Controller=None
+    )
+    sys.modules["pygame._sdl2"] = types.SimpleNamespace(controller=controller)
     sys.modules["pygame"] = pygame_stub
