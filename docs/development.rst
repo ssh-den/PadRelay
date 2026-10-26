@@ -120,6 +120,8 @@ Releases
 Maintainers update ``pyproject.toml`` and ``CHANGELOG.md``, verify the checks,
 then create and push a ``v*`` tag. Publishing requires a manual run of
 ``Build and Release`` against that tag; pushing it alone does not publish.
+The workflow runs the static checks and tests on Python 3.11 and 3.12 before
+building and publishing. Both versions must pass for the release to proceed.
 The tag must match the package version (``v2.0.0`` for ``2.0.0``), with a dated
 changelog entry. The workflow checks both before building and validates the
 distribution metadata before upload.

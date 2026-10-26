@@ -4,7 +4,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  checks:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e '.[dev]'
+
+      - name: Static checks
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/black --check .
+          .venv/bin/mypy
+          .venv/bin/pylint src/padrelay
+          .venv/bin/pyright
+
+      - name: Run tests with coverage
+        run: .venv/bin/pytest --cov=padrelay --cov-report=xml
+
   build-and-release:
+    needs: checks
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi
