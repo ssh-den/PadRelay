@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 project = "PadRelay"
 copyright = "2025, ssh-den"
 author = "ssh-den"
-release = "1.1.0"
-version = "1.1.0"
+release = "2.0.0"
+version = "2.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

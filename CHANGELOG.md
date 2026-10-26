@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning].
 
 ## Unreleased
 
+## [2.0.0] - 2026-10-26
+
 ### Changed
 - Minimum Python version is now 3.11.
 - UDP v2 replaces reusable tokens with TLS-authenticated sessions and
@@ -55,29 +57,29 @@ and this project adheres to [Semantic Versioning].
 - Enhanced security warnings throughout the application
 - Improved error messages for security-related issues
 
-## [1.0.4] - 2025-06-15
+## 1.0.4 - 2025-06-15
 
 ### Added
 - `padrelay-keymapper` CLI for creating controller mapping files
 
-## [1.0.3] - 2025-06-14
+## 1.0.3 - 2025-06-14
 
 ### Fixed
 - Synced GitHub release and PyPI version numbers to avoid mismatch
 - Ensured correct artifacts attached to GitHub Releases
 
-## [1.0.2] - 2025-06-14
+## 1.0.2 - 2025-06-14
 
 ### Fixed
 - Corrected `version` field in `pyproject.toml` to match intended release
 
-## [1.0.1] - 2025-06-14
+## 1.0.1 - 2025-06-14
 
 ### Added
 - CI: GitHub Actions workflow for testing with pytest (`python-tests.yml`)
 - CI: GitHub Actions workflow for building and publishing releases on tag push (`release.yml`)
 
-## [1.0.0] - 2025-06-14
+## 1.0.0 - 2025-06-14
 
 - initial release
 
@@ -86,9 +88,5 @@ and this project adheres to [Semantic Versioning].
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 <!-- Versions -->
+[2.0.0]: https://github.com/ssh-den/PadRelay/releases/tag/v2.0.0
 [1.1.0]: https://github.com/ssh-den/PadRelay/releases/tag/v1.1.0
-[1.0.4]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.4
-[1.0.3]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.3
-[1.0.2]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.2
-[1.0.1]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.1
-[1.0.0]: https://github.com/ssh-den/PadRelay/releases/tag/v1.0.0

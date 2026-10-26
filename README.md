@@ -12,7 +12,7 @@ and ViGEmBus. Requires **Python 3.11+**.
 One server process owns one virtual gamepad and admits one pending or
 authenticated client. UDP still requires a password and server certificate
 trust; legacy bearer tokens and unauthenticated UDP are rejected.
-See [Unreleased changes](CHANGELOG.md#unreleased) before upgrading older peers.
+See the [2.0.0 migration notes](CHANGELOG.md#200---2026-10-26) before upgrading older peers.
 
 ## Install
 

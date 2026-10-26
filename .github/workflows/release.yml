@@ -25,8 +25,27 @@ jobs:
           pip install --upgrade pip
           pip install build twine
 
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          if os.environ["RELEASE_TAG"] != f"v{version}":
+              raise SystemExit("Release tag must match the package version")
+          if f"## [{version}] - " not in Path("CHANGELOG.md").read_text():
+              raise SystemExit("Release version must have a dated changelog entry")
+          PY
+
       - name: Build package
         run: python -m build
+
+      - name: Check package metadata
+        run: python -m twine check --strict dist/*
 
       - name: Publish to PyPI
         env:

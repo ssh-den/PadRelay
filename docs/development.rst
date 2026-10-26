@@ -111,6 +111,9 @@ Releases
 Maintainers update ``pyproject.toml`` and ``CHANGELOG.md``, verify the checks,
 then create and push a ``v*`` tag. Publishing requires a manual run of
 ``Build and Release`` against that tag; pushing it alone does not publish.
+The tag must match the package version (``v2.0.0`` for ``2.0.0``), with a dated
+changelog entry. The workflow checks both before building and validates the
+distribution metadata before upload.
 The workflow uploads to PyPI before creating the GitHub release and requires
 the ``PYPI_API_TOKEN`` repository secret. Published PyPI versions cannot be
 overwritten.
