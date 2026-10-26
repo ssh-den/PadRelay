@@ -1,0 +1,14 @@
+# Core dependencies
+pygame==2.6.1
+
+# Windows-only dependency for emulating a gamepad (client or server)
+vgamepad==0.1.0; platform_system=="Windows"
+
+# TLS/SSL support
+cryptography>=41.0.0
+cffi>=1.15.0
+
+# Testing dependencies
+pytest==8.4.0
+pytest-asyncio==1.0.0
+

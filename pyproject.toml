@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "padrelay"
+version = "1.1.0"
+description = "A client-server application for transmitting gamepad input over a network"
+readme = "README.md"
+authors = [{ name = "ssh-den", email = "sshden@duck.com" }]
+license = "MIT"
+requires-python = ">=3.6"
+dependencies = ["pygame"]
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Topic :: Games/Entertainment"
+]
+
+[project.optional-dependencies]
+server = ["vgamepad"]
+
+[project.scripts]
+padrelay-client = "padrelay.scripts.client:main"
+padrelay-server = "padrelay.scripts.server:main"
+padrelay-keymapper = "padrelay.scripts.key_mapper:main"
+
+[project.urls]
+Homepage = "https://github.com/ssh-den/PadRelay"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
