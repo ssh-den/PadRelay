@@ -2,6 +2,7 @@
 """
 Entry point for the PadRelay server
 """
+
 import asyncio
 import signal
 import sys
@@ -10,24 +11,25 @@ import threading
 from padrelay.core.config import parse_server_args, validate_server_config
 from padrelay.core.logging_utils import get_logger
 from padrelay.server.server_app import VirtualGamepadServer
-from padrelay.core.exceptions import ConfigurationError
 
 logger = get_logger("server")
+
 
 async def async_main():
 
     # Parse command line arguments
     args, config_obj = parse_server_args()
-    
+
     # Validate configuration
     try:
         validate_server_config(args, config_obj)
     except ValueError as e:
         logger.error(f"Configuration error: {e}")
         return 1
-    
+
     # Create server application
     from pathlib import Path
+
     server = VirtualGamepadServer(
         host=args.host,
         port=args.port,
@@ -42,7 +44,7 @@ async def async_main():
         cert_path=Path(args.cert_path) if args.cert_path else None,
         key_path=Path(args.key_path) if args.key_path else None,
     )
-    
+
     # Set up signal handlers for clean shutdown
     loop = asyncio.get_running_loop()
 
@@ -66,14 +68,14 @@ async def async_main():
 
     monitor_thread = threading.Thread(target=signal_monitor, daemon=True)
     monitor_thread.start()
-    
+
     # Run the server
     try:
-        await server.run()
-        return 0
+        return 0 if await server.run() else 1
     except Exception as e:
         logger.error(f"Unhandled exception: {e}")
         return 1
+
 
 def main():
 
@@ -85,6 +87,7 @@ def main():
     except Exception as e:
         logger.exception("Fatal error: %s", e)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

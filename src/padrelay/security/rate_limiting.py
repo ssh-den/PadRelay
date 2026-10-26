@@ -1,133 +1,123 @@
-"""
-Rate limiting utilities for the PadRelay
-"""
-from collections import defaultdict
-from datetime import datetime, timedelta
-from typing import DefaultDict, Dict, Tuple
-from ..core.logging_utils import get_logger
+"""Bounded IP/global token buckets and atomic connection reservations."""
+
+import time
+from dataclasses import dataclass
+
 from ..server.constants import DEFAULT_BLOCK_DURATION
 
-logger = get_logger(__name__)
+
+@dataclass
+class _Bucket:
+    tokens: float
+    updated: float
+    blocked_until: float = 0
+
 
 class ConnectionTracker:
-    """
-    Track active connections and implement rate limiting
-    """
+    """Admission operations run synchronously on the server event loop."""
+
     def __init__(
         self,
         max_connections: int = 1,
         rate_limit_window: int = 60,
         max_requests: int = 100,
         block_duration: int = DEFAULT_BLOCK_DURATION,
+        max_tracked_ips: int = 1024,
+        global_max_requests: int = 12000,
     ) -> None:
-        """
-        Initialize connection tracker
-        
-        Args:
-            max_connections: Maximum number of simultaneous connections
-            rate_limit_window: Time window for rate limiting in seconds
-            max_requests: Maximum number of requests per window
-        """
-        self.clients: DefaultDict[Tuple[str, int], Dict] = defaultdict(lambda: {
-            'last_seen': datetime.now(),
-            'authenticated': False,
-            'last_requests': []
-        })
+        if (
+            min(
+                max_connections,
+                rate_limit_window,
+                max_requests,
+                block_duration,
+                max_tracked_ips,
+                global_max_requests,
+            )
+            <= 0
+        ):
+            raise ValueError("Admission limits must be positive")
         self.max_connections = max_connections
         self.rate_limit_window = rate_limit_window
         self.max_requests = max_requests
-        self.active_connections = 0
         self.block_duration = block_duration
-        self.blocked_clients: Dict[Tuple[str, int], datetime] = {}
+        self.max_tracked_ips = max_tracked_ips
+        self.global_max_requests = global_max_requests
+        self.clients: dict[str, _Bucket] = {}
+        self._pending: set[tuple] = set()
+        self._authenticated: set[tuple] = set()
+        self._global = _Bucket(float(global_max_requests), time.monotonic())
+        self._last_cleanup = time.monotonic()
 
-    def can_connect(self, addr: Tuple[str, int]) -> bool:
-        """
-        Check if a new connection is allowed
-        
-        Args:
-            addr: Client address tuple
-            
-        Returns:
-            bool: True if connection is allowed, False otherwise
-        """
-        self._cleanup()
-        return self.active_connections < self.max_connections
+    @property
+    def active_connections(self) -> int:
+        return len(self._authenticated)
 
-    def is_rate_limited(self, addr: Tuple[str, int]) -> bool:
-        """Check if client is being rate limited or blocked."""
-        self._cleanup()
-        now = datetime.now()
+    @property
+    def pending_connections(self) -> int:
+        return len(self._pending)
 
-        # Check existing block
-        if addr in self.blocked_clients:
-            if now < self.blocked_clients[addr]:
+    def can_connect(self, addr: tuple) -> bool:
+        return addr not in self._pending | self._authenticated and (
+            self.active_connections + self.pending_connections < self.max_connections
+        )
+
+    def reserve(self, addr: tuple) -> bool:
+        """Claim a connection slot synchronously before network waits."""
+        if not self.can_connect(addr):
+            return False
+        self._pending.add(addr)
+        return True
+
+    def authenticate(self, addr: tuple) -> None:
+        if addr in self._authenticated:
+            return
+        if addr not in self._pending and not self.reserve(addr):
+            raise ValueError("No connection reservation available")
+        self._pending.discard(addr)
+        self._authenticated.add(addr)
+
+    def disconnect(self, addr: tuple) -> None:
+        self._pending.discard(addr)
+        self._authenticated.discard(addr)
+
+    def _take(self, bucket: _Bucket, capacity: int, now: float) -> bool:
+        bucket.tokens = min(
+            capacity,
+            bucket.tokens + (now - bucket.updated) * capacity / self.rate_limit_window,
+        )
+        bucket.updated = now
+        if now < bucket.blocked_until:
+            return False
+        if bucket.tokens < 1:
+            bucket.blocked_until = now + self.block_duration
+            return False
+        bucket.tokens -= 1
+        return True
+
+    def is_rate_limited(self, addr: tuple) -> bool:
+        now = time.monotonic()
+        # Check the global packet budget before allocating a per-IP bucket.
+        if not self._take(self._global, self.global_max_requests, now):
+            return True
+        if now - self._last_cleanup >= 1:
+            self._cleanup(now)
+        ip = addr[0]
+        bucket = self.clients.get(ip)
+        if bucket is None:
+            # Fail closed at capacity: new IPs cannot evict existing blocks.
+            if len(self.clients) >= self.max_tracked_ips:
                 return True
-            else:
-                del self.blocked_clients[addr]
+            bucket = self.clients[ip] = _Bucket(float(self.max_requests), now)
+        return not self._take(bucket, self.max_requests, now)
 
-        client = self.clients[addr]
+    def is_blocked(self, addr: tuple) -> bool:
+        bucket = self.clients.get(addr[0])
+        return bucket is not None and time.monotonic() < bucket.blocked_until
 
-        # Remove expired requests
-        client['last_requests'] = [t for t in client['last_requests']
-                                   if now - t < timedelta(seconds=self.rate_limit_window)]
-
-        # Add current request
-        client['last_requests'].append(now)
-        client['last_seen'] = now
-
-        # Check if rate limit exceeded
-        if len(client['last_requests']) > self.max_requests:
-            self.blocked_clients[addr] = now + timedelta(seconds=self.block_duration)
-            return True
-
-        return False
-
-    def is_blocked(self, addr: Tuple[str, int]) -> bool:
-        """Check if a client is currently blocked"""
-        self._cleanup()
-        now = datetime.now()
-        if addr in self.blocked_clients and now < self.blocked_clients[addr]:
-            return True
-        return False
-
-    def authenticate(self, addr: Tuple[str, int]) -> None:
-        """
-        Mark a client as authenticated
-        
-        Args:
-            addr: Client address tuple
-        """
-        if not self.clients[addr]['authenticated']:
-            self.active_connections += 1
-            
-        self.clients[addr]['authenticated'] = True
-        self.clients[addr]['last_seen'] = datetime.now()
-        logger.info(f"Client {addr} authenticated. Active connections: {self.active_connections}")
-
-    def disconnect(self, addr: Tuple[str, int]) -> None:
-        """
-        Handle client disconnection
-        
-        Args:
-            addr: Client address tuple
-        """
-        if addr in self.clients and self.clients[addr]['authenticated']:
-            self.active_connections -= 1
-            self.clients[addr]['authenticated'] = False
-            logger.info(f"Client {addr} disconnected. Active connections: {self.active_connections}")
-
-    def _cleanup(self) -> None:
-        """Clean up expired client and block records"""
-        now = datetime.now()
-        expired = [addr for addr, data in self.clients.items()
-                   if now - data['last_seen'] > timedelta(minutes=5)]
-
-        for addr in expired:
-            if self.clients[addr]['authenticated']:
-                self.active_connections -= 1
-            del self.clients[addr]
-
-        expired_blocks = [addr for addr, expiry in self.blocked_clients.items()
-                          if now > expiry]
-        for addr in expired_blocks:
-            del self.blocked_clients[addr]
+    def _cleanup(self, now: float) -> None:
+        self._last_cleanup = now
+        ttl = max(self.rate_limit_window, self.block_duration)
+        for ip, bucket in list(self.clients.items()):
+            if now - bucket.updated >= ttl and now >= bucket.blocked_until:
+                del self.clients[ip]

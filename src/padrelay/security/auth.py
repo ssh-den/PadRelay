@@ -1,29 +1,33 @@
 """
 Authentication utilities for the PadRelay
 """
+
+import asyncio
 import hashlib
 import hmac
 import secrets
-import time
 from typing import Optional
+
 from ..core.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class Authenticator:
     """Authentication handler for both client and server"""
-    
+
     PBKDF2_PREFIX = "pbkdf2_sha256"
     DEFAULT_ITERATIONS = 100000
-    UDP_TOKEN_TTL = 60  # seconds
+    MIN_ITERATIONS = 100000
+    MAX_ITERATIONS = 600000
+    MAX_SALT_LENGTH = 128
 
     def __init__(self, password: Optional[str] = None) -> None:
         """
         Initialize an authenticator
-        
+
         Args:
-            password: Plain text password (optional)
-            salt: Salt for password hashing (optional)
+            password: Plaintext password or encoded PBKDF2 hash (optional)
         """
         self.password_plain: Optional[str] = None
         self.salt: Optional[str] = None
@@ -32,22 +36,52 @@ class Authenticator:
 
         if password:
             if self._is_hash_string(password):
-                self.iterations, self.salt, self.password_hash = self._parse_hash_string(password)
+                self.iterations, self.salt, self.password_hash = (
+                    self._parse_hash_string(password)
+                )
             else:
                 self.password_plain = password
                 self.salt = secrets.token_hex(16)
-                self.password_hash = self._hash_password(password, self.salt, self.iterations)
+                self.password_hash = self._hash_password(
+                    password, self.salt, self.iterations
+                )
+
+    @staticmethod
+    def validate_parameters(salt: str, iterations: int) -> None:
+        """Reject unsupported PBKDF2 work factors and salt sizes before hashing."""
+        if (
+            type(iterations) is not int
+            or not Authenticator.MIN_ITERATIONS
+            <= iterations
+            <= Authenticator.MAX_ITERATIONS
+            or not isinstance(salt, str)
+            or not 16 <= len(salt) <= Authenticator.MAX_SALT_LENGTH
+            or not salt.isascii()
+        ):
+            raise ValueError("Invalid or excessive PBKDF2 parameters")
 
     def set_parameters(self, salt: str, iterations: int) -> None:
-        """Set hashing parameters and recompute derived key if needed"""
-        self.salt = salt
-        self.iterations = iterations
+        self.validate_parameters(salt, iterations)
+        digest = (
+            self._hash_password(self.password_plain, salt, iterations)
+            if self.password_plain
+            else self.password_hash
+        )
+        self.salt, self.iterations, self.password_hash = salt, iterations, digest
+
+    async def set_parameters_async(self, salt: str, iterations: int) -> None:
+        """Validate before scheduling; commit only after completed derivation."""
+        self.validate_parameters(salt, iterations)
+        digest = self.password_hash
         if self.password_plain:
-            self.password_hash = self._hash_password(self.password_plain, salt, iterations)
-    
+            digest = await asyncio.to_thread(
+                self._hash_password, self.password_plain, salt, iterations
+            )
+        self.salt, self.iterations, self.password_hash = salt, iterations, digest
+
     @staticmethod
     def _is_hash_string(value: str) -> bool:
-        return value.startswith(Authenticator.PBKDF2_PREFIX + "$") and len(value.split("$")) == 4
+        return value.startswith(Authenticator.PBKDF2_PREFIX + "$")
 
     @staticmethod
     def _parse_hash_string(value: str) -> tuple[int, str, str]:
@@ -57,6 +91,9 @@ class Authenticator:
         iterations = int(parts[1])
         salt = parts[2]
         pw_hash = parts[3]
+        Authenticator.validate_parameters(salt, iterations)
+        if len(pw_hash) != 64 or len(bytes.fromhex(pw_hash)) != 32:
+            raise ValueError("Invalid password hash")
         return iterations, salt, pw_hash
 
     @staticmethod
@@ -70,19 +107,17 @@ class Authenticator:
     def _hash_password(password: str, salt: str, iterations: int) -> str:
         """
         Hash password using PBKDF2.
-        
+
         Args:
             password: Plain text password
             salt: Salt for hashing
-            
+
         Returns:
             str: Hexadecimal digest of the hashed password
         """
+        Authenticator.validate_parameters(salt, iterations)
         return hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode(),
-            salt.encode(),
-            iterations
+            "sha256", password.encode(), salt.encode(), iterations
         ).hex()
 
     def get_hash_string(self) -> Optional[str]:
@@ -95,71 +130,49 @@ class Authenticator:
             return False
         digest = self._hash_password(password, self.salt, self.iterations)
         return hmac.compare_digest(digest, self.password_hash)
-    
+
     def generate_tcp_challenge(self) -> str:
         """
         Generate a challenge for TCP authentication
-        
+
         Returns:
             str: Random challenge string
         """
         return secrets.token_hex(16)
-    
+
     def verify_tcp_response(self, challenge: str, response: str) -> bool:
         """
         Verify a TCP authentication response
-        
+
         Args:
             challenge: Challenge string
             response: HMAC response to verify
-            
+
         Returns:
             bool: True if response is valid, False otherwise
         """
-        
+
         key = self.password_hash or self.password_plain
         if not key:
             return True
 
         expected_hmac = hmac.new(
-            key.encode(),
-            challenge.encode(),
-            hashlib.sha256
+            key.encode(), challenge.encode(), hashlib.sha256
         ).hexdigest()
-        
-        return hmac.compare_digest(response, expected_hmac)
-    
-    def generate_udp_token(self, current_time: Optional[int] = None) -> Optional[str]:
-        """
-        Generate a token for UDP authentication
-        
-        Returns:
-            str: Authentication token
-        """
-        
-        key = self.password_plain or self.password_hash
 
-        if not key:
-            return None
+        return (
+            isinstance(response, str)
+            and response.isascii()
+            and hmac.compare_digest(response, expected_hmac)
+        )
 
-        if current_time is None:
-            current_time = int(time.time())
-
-        window = current_time // self.UDP_TOKEN_TTL
-
-        return hmac.new(
-            key.encode(),
-            f"udp_auth{window}".encode(),
-            hashlib.sha256
-        ).hexdigest()
-    
     def generate_tcp_response(self, challenge: str) -> str:
         """
         Generate a response to a TCP authentication challenge
-        
+
         Args:
             challenge: Challenge string
-            
+
         Returns:
             str: HMAC response
         """
@@ -168,37 +181,4 @@ class Authenticator:
         if not key:
             return ""
 
-        return hmac.new(
-            key.encode(),
-            challenge.encode(),
-            hashlib.sha256
-        ).hexdigest()
-    
-    def authenticate_udp(self, message: dict, current_time: Optional[int] = None) -> bool:
-        """
-        Authenticate a UDP message
-        
-        Args:
-            message: Message to authenticate
-            
-        Returns:
-            bool: True if message is authenticated, False otherwise
-        """
-        key = self.password_plain or self.password_hash
-
-        if not key:
-            return True
-
-        if current_time is None:
-            current_time = int(time.time())
-
-        token = message.get("auth_token")
-        if not token:
-            return False
-
-        valid_tokens = [
-            self.generate_udp_token(current_time=current_time),
-            self.generate_udp_token(current_time=current_time - self.UDP_TOKEN_TTL),
-        ]
-
-        return token in valid_tokens
+        return hmac.new(key.encode(), challenge.encode(), hashlib.sha256).hexdigest()

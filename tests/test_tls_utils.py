@@ -1,17 +1,19 @@
 """Tests for TLS utilities"""
-import pytest
+
 import ssl
-import tempfile
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
+
+import pytest
+
 from padrelay.security.tls_utils import (
-    generate_self_signed_cert,
-    create_server_ssl_context,
-    create_client_ssl_context,
     check_cert_expiration,
-    warn_if_cert_expiring_soon,
-    get_default_cert_paths,
+    create_client_ssl_context,
+    create_server_ssl_context,
     ensure_cert_dir_exists,
+    generate_self_signed_cert,
+    get_default_cert_paths,
+    warn_if_cert_expiring_soon,
 )
 
 
@@ -24,9 +26,7 @@ class TestCertificateGeneration:
         key_path = tmp_path / "test.key"
 
         result_cert, result_key = generate_self_signed_cert(
-            cert_path=cert_path,
-            key_path=key_path,
-            days_valid=365
+            cert_path=cert_path, key_path=key_path, days_valid=365
         )
 
         # Check that files were created
@@ -38,8 +38,7 @@ class TestCertificateGeneration:
         assert result_key == key_path
 
         # Check file permissions (600 = owner read/write only)
-        import stat
-        cert_stat = cert_path.stat()
+        assert cert_path.stat().st_mode & 0o777 == 0o600
         key_stat = key_path.stat()
 
         # Key should be readable and writable by owner only
@@ -56,7 +55,7 @@ class TestCertificateGeneration:
             days_valid=30,
             country="GB",
             organization="TestOrg",
-            common_name="test.local"
+            common_name="test.local",
         )
 
         assert cert_path.exists()
@@ -75,6 +74,7 @@ class TestCertificateGeneration:
         """Test certificate directory creation"""
         # Temporarily override the default cert dir
         import padrelay.security.tls_utils as tls_module
+
         original_cert_dir = tls_module.DEFAULT_CERT_DIR
         tls_module.DEFAULT_CERT_DIR = tmp_path / "certs"
 
@@ -84,7 +84,6 @@ class TestCertificateGeneration:
             assert cert_dir.is_dir()
 
             # Check permissions (700 = owner only)
-            import stat
             dir_stat = cert_dir.stat()
             assert dir_stat.st_mode & 0o777 == 0o700
         finally:
@@ -100,9 +99,7 @@ class TestSSLContextCreation:
         key_path = tmp_path / "server.key"
 
         ssl_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=True
+            cert_path=cert_path, key_path=key_path, auto_generate=True
         )
 
         assert ssl_context is not None
@@ -121,9 +118,7 @@ class TestSSLContextCreation:
 
         # Create SSL context with existing cert
         ssl_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=False
+            cert_path=cert_path, key_path=key_path, auto_generate=False
         )
 
         assert ssl_context is not None
@@ -134,14 +129,10 @@ class TestSSLContextCreation:
         cert_path = tmp_path / "missing.crt"
         key_path = tmp_path / "missing.key"
 
-        ssl_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=False
-        )
-
-        # Should return None when cert doesn't exist and auto_generate=False
-        assert ssl_context is None
+        with pytest.raises(FileNotFoundError):
+            create_server_ssl_context(
+                cert_path=cert_path, key_path=key_path, auto_generate=False
+            )
 
     def test_create_client_ssl_context_no_verify(self):
         """Test client SSL context without verification"""
@@ -157,8 +148,9 @@ class TestSSLContextCreation:
         ssl_context = create_client_ssl_context(verify_cert=True, ca_path=None)
 
         assert ssl_context is not None
-        # Should fall back to no verification
-        assert ssl_context.verify_mode == ssl.CERT_NONE
+        # No custom bundle means system trust, never disabled verification.
+        assert ssl_context.verify_mode == ssl.CERT_REQUIRED
+        assert ssl_context.check_hostname
 
     def test_create_client_ssl_context_with_ca(self, tmp_path):
         """Test client SSL context with CA certificate"""
@@ -180,9 +172,7 @@ class TestSSLContextCreation:
         key_path = tmp_path / "test.key"
 
         server_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=True
+            cert_path=cert_path, key_path=key_path, auto_generate=True
         )
 
         client_context = create_client_ssl_context(verify_cert=False)
@@ -201,9 +191,7 @@ class TestCertificateExpiration:
         key_path = tmp_path / "test.key"
 
         generate_self_signed_cert(
-            cert_path=cert_path,
-            key_path=key_path,
-            days_valid=365
+            cert_path=cert_path, key_path=key_path, days_valid=365
         )
 
         expiration = check_cert_expiration(cert_path)
@@ -227,11 +215,7 @@ class TestCertificateExpiration:
         key_path = tmp_path / "test.key"
 
         # Generate cert valid for only 10 days
-        generate_self_signed_cert(
-            cert_path=cert_path,
-            key_path=key_path,
-            days_valid=10
-        )
+        generate_self_signed_cert(cert_path=cert_path, key_path=key_path, days_valid=10)
 
         # Should warn if expiring within 30 days
         result = warn_if_cert_expiring_soon(cert_path, days_warning=30)
@@ -244,9 +228,7 @@ class TestCertificateExpiration:
 
         # Generate cert valid for 365 days
         generate_self_signed_cert(
-            cert_path=cert_path,
-            key_path=key_path,
-            days_valid=365
+            cert_path=cert_path, key_path=key_path, days_valid=365
         )
 
         # Should not warn if expiring in more than 30 days
@@ -267,9 +249,7 @@ class TestIntegration:
 
         # 2. Create server SSL context
         server_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=False
+            cert_path=cert_path, key_path=key_path, auto_generate=False
         )
 
         # 3. Create client SSL context
@@ -295,9 +275,7 @@ class TestIntegration:
 
         # Create SSL contexts
         server_context = create_server_ssl_context(
-            cert_path=cert_path,
-            key_path=key_path,
-            auto_generate=False
+            cert_path=cert_path, key_path=key_path, auto_generate=False
         )
         client_context = create_client_ssl_context(verify_cert=False)
 
@@ -320,10 +298,7 @@ class TestIntegration:
 
         # Start server
         server = await asyncio.start_server(
-            handle_client,
-            '127.0.0.1',
-            0,  # Use any available port
-            ssl=server_context
+            handle_client, "127.0.0.1", 0, ssl=server_context  # Use any available port
         )
 
         addr = server.sockets[0].getsockname()
@@ -336,20 +311,19 @@ class TestIntegration:
             try:
                 # Connect client
                 reader, writer = await asyncio.open_connection(
-                    '127.0.0.1',
-                    port,
-                    ssl=client_context,
-                    server_hostname='localhost'
+                    "127.0.0.1", port, ssl=client_context, server_hostname="localhost"
                 )
 
                 # Verify TLS connection
-                ssl_object = writer.get_extra_info('ssl_object')
+                ssl_object = writer.get_extra_info("ssl_object")
                 assert ssl_object is not None, "SSL object should exist"
 
                 # Verify TLS version
                 tls_version = ssl_object.version()
                 assert tls_version is not None, "TLS version should be available"
-                assert 'TLSv1' in tls_version, f"Expected TLS version, got {tls_version}"
+                assert (
+                    "TLSv1" in tls_version
+                ), f"Expected TLS version, got {tls_version}"
 
                 # Verify cipher
                 cipher = ssl_object.cipher()

@@ -1,5 +1,5 @@
 import asyncio
-import json
+
 import pytest
 
 from padrelay.protocol.tcp import TCPProtocolHandler

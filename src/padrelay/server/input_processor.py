@@ -1,9 +1,12 @@
 """Utilities that translate input messages into virtual gamepad actions"""
+
 from __future__ import annotations
 
+from configparser import ConfigParser
 from typing import Dict, List, Optional
 
 from ..core.logging_utils import get_logger
+from .virtual_gamepad import VirtualGamepad
 
 logger = get_logger(__name__)
 
@@ -11,7 +14,9 @@ logger = get_logger(__name__)
 class GamepadHandler:
     """Apply received messages to a virtual gamepad"""
 
-    def __init__(self, gamepad: "VirtualGamepad", config: Optional[object] = None) -> None:
+    def __init__(
+        self, gamepad: "VirtualGamepad", config: Optional[ConfigParser] = None
+    ) -> None:
         self.gamepad = gamepad
         self.config = config
 
@@ -33,10 +38,12 @@ class GamepadHandler:
                         config["axis_options"].get("trigger_threshold", 0.1)
                     )
                     self.invert_left_y = (
-                        config["axis_options"].get("invert_left_y", "false").lower() == "true"
+                        config["axis_options"].get("invert_left_y", "false").lower()
+                        == "true"
                     )
                     self.invert_right_y = (
-                        config["axis_options"].get("invert_right_y", "false").lower() == "true"
+                        config["axis_options"].get("invert_right_y", "false").lower()
+                        == "true"
                     )
                 except Exception:  # pragma: no cover - best effort parsing
                     pass
@@ -48,10 +55,19 @@ class GamepadHandler:
                     self.axis_map = {}
 
         # State used for change detection
-        self.last_buttons: List[bool] = []
-        self.last_axes: List[float] = []
+        self.last_buttons: Optional[List[bool]] = None
+        self.last_axes: Optional[List[float]] = None
+        self.last_triggers: Optional[List[float]] = None
         self.buttons_changed = True
         self.axes_changed = True
+        self.update_counter = 0
+
+    def reset(self) -> None:
+        """Reset output and force the next connection's first state to apply."""
+        self.gamepad.reset_gamepad_state()
+        self.last_buttons = None
+        self.last_axes = None
+        self.last_triggers = None
         self.update_counter = 0
 
     def process(self, message: Dict) -> None:
@@ -69,9 +85,11 @@ class GamepadHandler:
                 self.buttons_changed = False
 
             axes = message.get("axes", [])
-            if axes != self.last_axes or force_update:
+            triggers = message.get("triggers", [])
+            if axes != self.last_axes or triggers != self.last_triggers or force_update:
                 self.process_axes(message)
                 self.last_axes = list(axes)
+                self.last_triggers = list(triggers)
                 self.axes_changed = True
             else:
                 self.axes_changed = False
@@ -99,7 +117,11 @@ class GamepadHandler:
         else:
             self.process_basic_axes(axes, message)
 
-    def process_advanced_axes(self, axes: List[float], message: Dict) -> None:
+    def process_advanced_axes(
+        self,
+        axes: List[float],
+        message: Dict,  # pylint: disable=unused-argument
+    ) -> None:
         """Handle axes with advanced mapping"""
         if all(k in self.axis_map for k in ("left_stick_x", "left_stick_y")):
             lx = self.axis_map["left_stick_x"]
@@ -109,7 +131,9 @@ class GamepadHandler:
                 y_val = axes[ly] if abs(axes[ly]) > self.dead_zone else 0.0
                 if self.invert_left_y:
                     y_val = -y_val
-                self.gamepad.left_joystick_float(x_value_float=x_val, y_value_float=y_val)
+                self.gamepad.left_joystick_float(
+                    x_value_float=x_val, y_value_float=y_val
+                )
 
         if all(k in self.axis_map for k in ("right_stick_x", "right_stick_y")):
             rx = self.axis_map["right_stick_x"]
@@ -119,17 +143,29 @@ class GamepadHandler:
                 y_val = axes[ry] if abs(axes[ry]) > self.dead_zone else 0.0
                 if self.invert_right_y:
                     y_val = -y_val
-                self.gamepad.right_joystick_float(x_value_float=x_val, y_value_float=y_val)
+                self.gamepad.right_joystick_float(
+                    x_value_float=x_val, y_value_float=y_val
+                )
 
-        if "trigger_left" in self.axis_map and len(axes) > self.axis_map["trigger_left"]:
+        if (
+            "trigger_left" in self.axis_map
+            and len(axes) > self.axis_map["trigger_left"]
+        ):
             idx = self.axis_map["trigger_left"]
             val = (axes[idx] + 1) / 2.0
-            self.gamepad.left_trigger_float(value_float=val if val > self.trigger_threshold else 0.0)
+            self.gamepad.left_trigger_float(
+                value_float=val if val > self.trigger_threshold else 0.0
+            )
 
-        if "trigger_right" in self.axis_map and len(axes) > self.axis_map["trigger_right"]:
+        if (
+            "trigger_right" in self.axis_map
+            and len(axes) > self.axis_map["trigger_right"]
+        ):
             idx = self.axis_map["trigger_right"]
             val = (axes[idx] + 1) / 2.0
-            self.gamepad.right_trigger_float(value_float=val if val > self.trigger_threshold else 0.0)
+            self.gamepad.right_trigger_float(
+                value_float=val if val > self.trigger_threshold else 0.0
+            )
 
     def process_basic_axes(self, axes: List[float], message: Dict) -> None:
         """Handle axes with the default mapping"""
@@ -149,4 +185,3 @@ class GamepadHandler:
             right = triggers[1] if triggers[1] > self.trigger_threshold else 0.0
             self.gamepad.left_trigger_float(value_float=left)
             self.gamepad.right_trigger_float(value_float=right)
-

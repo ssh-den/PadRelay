@@ -2,12 +2,14 @@
 
 import asyncio
 import contextlib
+
 import pytest
 
-from padrelay.protocol.constants import PROTOCOL_VERSION
 from padrelay.client import client_app
-from padrelay.server import server_app
+from padrelay.protocol.constants import PROTOCOL_VERSION
+from padrelay.security import tls_utils
 from padrelay.security.auth import Authenticator
+from padrelay.server import server_app
 
 
 class DummyGamepadDevice:
@@ -107,7 +109,7 @@ async def run_server_client(protocol: str):
     # Wait for server to start
     while protocol == "tcp" and not server.server:
         await asyncio.sleep(0.01)
-    while protocol == "udp" and not getattr(server, "transport", None):
+    while protocol == "udp" and not server.server:
         await asyncio.sleep(0.01)
 
     if protocol == "tcp":
@@ -117,7 +119,13 @@ async def run_server_client(protocol: str):
 
     gamepad = DummyGamepadInput()
     client = client_app.VirtualGamepadClient(
-        host, port, protocol, gamepad, update_rate=30, password="secret"
+        host,
+        port,
+        protocol,
+        gamepad,
+        update_rate=30,
+        password="secret",
+        ca_path=tls_utils.DEFAULT_CERT_FILE if protocol == "udp" else None,
     )
     client_task = asyncio.create_task(client.run())
 
@@ -161,14 +169,20 @@ async def test_udp_end_to_end_hashed(monkeypatch):
     )
     server_task = asyncio.create_task(server.run())
 
-    while not getattr(server, "transport", None):
+    while not server.server:
         await asyncio.sleep(0.01)
 
     host, port = server.transport.get_extra_info("sockname")
 
     gamepad = DummyGamepadInput()
     client = client_app.VirtualGamepadClient(
-        host, port, "udp", gamepad, update_rate=30, password=hashed
+        host,
+        port,
+        "udp",
+        gamepad,
+        update_rate=30,
+        password=hashed,
+        ca_path=tls_utils.DEFAULT_CERT_FILE,
     )
     client_task = asyncio.create_task(client.run())
 
@@ -196,14 +210,20 @@ async def test_udp_plain_client_hashed_server(monkeypatch):
     )
     server_task = asyncio.create_task(server.run())
 
-    while not getattr(server, "transport", None):
+    while not server.server:
         await asyncio.sleep(0.01)
 
     host, port = server.transport.get_extra_info("sockname")
 
     gamepad = DummyGamepadInput()
     client = client_app.VirtualGamepadClient(
-        host, port, "udp", gamepad, update_rate=30, password="secret"
+        host,
+        port,
+        "udp",
+        gamepad,
+        update_rate=30,
+        password="secret",
+        ca_path=tls_utils.DEFAULT_CERT_FILE,
     )
     client_task = asyncio.create_task(client.run())
 

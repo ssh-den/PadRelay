@@ -1,10 +1,12 @@
 """TLS/SSL utilities for secure communication"""
-import ssl
-import os
+
 import ipaddress
-from pathlib import Path
+import os
+import ssl
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, Tuple
+
 from ..core.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +46,7 @@ def generate_self_signed_cert(
     state: str = "State",
     locality: str = "City",
     organization: str = "PadRelay",
-    common_name: str = "localhost"
+    common_name: str = "localhost",
 ) -> Tuple[Path, Path]:
     """Generate a self-signed certificate for TLS
 
@@ -63,10 +65,9 @@ def generate_self_signed_cert(
     """
     try:
         from cryptography import x509
-        from cryptography.x509.oid import NameOID
-        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
-        from cryptography.hazmat.primitives import serialization
+        from cryptography.x509.oid import NameOID
     except ImportError:
         logger.error(
             "cryptography package not installed. "
@@ -80,8 +81,11 @@ def generate_self_signed_cert(
     if key_path is None:
         key_path = DEFAULT_KEY_FILE
 
-    # Ensure directory exists
-    ensure_cert_dir_exists()
+    # Only change permissions on our own directory, never a supplied parent.
+    if cert_path.parent == DEFAULT_CERT_DIR or key_path.parent == DEFAULT_CERT_DIR:
+        ensure_cert_dir_exists()
+    cert_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    key_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     logger.info("Generating self-signed certificate...")
 
@@ -92,53 +96,65 @@ def generate_self_signed_cert(
     )
 
     # Create certificate subject and issuer (same for self-signed)
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, country),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, locality),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
-        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, country),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, locality),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        ]
+    )
+
+    names: list[x509.GeneralName] = [
+        x509.DNSName("localhost"),
+        x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
+    ]
+    name: x509.GeneralName
+    if common_name != "localhost":
+        try:
+            name = x509.IPAddress(ipaddress.ip_address(common_name))
+        except ValueError:
+            name = x509.DNSName(common_name)
+        if name not in names:
+            names.append(name)
 
     # Build certificate
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        private_key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.utcnow()
-    ).not_valid_after(
-        datetime.utcnow() + timedelta(days=days_valid)
-    ).add_extension(
-        x509.SubjectAlternativeName([
-            x509.DNSName("localhost"),
-            x509.DNSName("127.0.0.1"),
-            x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
-        ]),
-        critical=False,
-    ).sign(private_key, hashes.SHA256())
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.utcnow())
+        .not_valid_after(datetime.utcnow() + timedelta(days=days_valid))
+        .add_extension(
+            x509.SubjectAlternativeName(names),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
 
-    # Write private key to file
-    with open(key_path, "wb") as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
-
-    # Set key file permissions to owner-only (600)
-    os.chmod(key_path, 0o600)
+    # Create with restrictive permissions before writing any key material.
+    # Exclusive creation also refuses existing files and symlinks.
+    if cert_path.exists() or key_path.exists():
+        raise FileExistsError("Refusing to replace an existing TLS identity")
+    with os.fdopen(
+        os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
+    ) as f:
+        f.write(
+            private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
 
     # Write certificate to file
-    with open(cert_path, "wb") as f:
+    with os.fdopen(
+        os.open(cert_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
+    ) as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
-
-    # Set cert file permissions to owner-only (600)
-    os.chmod(cert_path, 0o600)
 
     logger.info(f"Certificate generated: {cert_path}")
     logger.info(f"Private key generated: {key_path}")
@@ -150,8 +166,8 @@ def generate_self_signed_cert(
 def create_server_ssl_context(
     cert_path: Optional[Path] = None,
     key_path: Optional[Path] = None,
-    auto_generate: bool = True
-) -> Optional[ssl.SSLContext]:
+    auto_generate: bool = True,
+) -> ssl.SSLContext:
     """Create SSL context for server
 
     Args:
@@ -160,7 +176,7 @@ def create_server_ssl_context(
         auto_generate: If True, automatically generate certificate if not found
 
     Returns:
-        SSLContext or None if TLS is disabled
+        SSLContext. Missing, incomplete or invalid identities raise an error.
     """
     # Use default paths if not provided
     if cert_path is None:
@@ -170,13 +186,15 @@ def create_server_ssl_context(
 
     # Check if certificate exists, generate if needed
     if not cert_path.exists() or not key_path.exists():
-        if auto_generate:
-            logger.info("Certificate not found, generating new self-signed certificate...")
+        if auto_generate and not cert_path.exists() and not key_path.exists():
+            logger.info(
+                "Certificate not found, generating new self-signed certificate..."
+            )
             cert_path, key_path = generate_self_signed_cert(cert_path, key_path)
         else:
-            logger.error(f"Certificate not found: {cert_path}")
-            logger.error(f"Key not found: {key_path}")
-            return None
+            raise FileNotFoundError(
+                f"TLS requires both certificate {cert_path} and key {key_path}"
+            )
 
     # Create SSL context
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -184,59 +202,55 @@ def create_server_ssl_context(
 
     # Configure SSL context for security
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-    ssl_context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS')
+    ssl_context.set_ciphers(
+        "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS"
+    )
 
     logger.info("TLS/SSL enabled for server")
-    logger.debug(f"Server SSL context configuration:")
+    logger.debug("Server SSL context configuration:")
     logger.debug(f"  Certificate: {cert_path}")
     logger.debug(f"  Key: {key_path}")
-    logger.debug(f"  Minimum TLS version: TLS 1.2")
-    logger.debug(f"  Cipher suites: ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
+    logger.debug("  Minimum TLS version: TLS 1.2")
+    logger.debug("  Cipher suites: ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
     return ssl_context
 
 
 def create_client_ssl_context(
-    verify_cert: bool = False,
-    ca_path: Optional[Path] = None
+    verify_cert: bool = True, ca_path: Optional[Path] = None
 ) -> ssl.SSLContext:
     """Create SSL context for client
 
     Args:
-        verify_cert: If True, verify server certificate (requires CA certificate)
-        ca_path: Path to CA certificate for verification (optional)
+        verify_cert: Verify server identity; False is an explicit insecure opt-out.
+        ca_path: Trusted CA bundle or self-signed server certificate. If omitted,
+            use the system trust store. An invalid path always raises an error.
 
     Returns:
         SSLContext configured for client
     """
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-
-    if verify_cert and ca_path and ca_path.exists():
-        # Verify server certificate using CA
-        ssl_context.check_hostname = True
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
-        ssl_context.load_verify_locations(str(ca_path))
+    if verify_cert:
+        ssl_context = ssl.create_default_context(
+            cafile=str(ca_path) if ca_path is not None else None
+        )
         logger.info("TLS/SSL enabled for client with certificate verification")
-        logger.debug(f"Client SSL context configuration:")
-        logger.debug(f"  Certificate verification: ENABLED")
+        logger.debug("Client SSL context configuration:")
+        logger.debug("  Certificate verification: ENABLED")
         logger.debug(f"  CA certificate: {ca_path}")
-        logger.debug(f"  Hostname verification: ENABLED")
+        logger.debug("  Hostname verification: ENABLED")
     else:
-        # Don't verify certificate (self-signed)
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-        if verify_cert:
-            logger.warning(
-                "Certificate verification requested but CA certificate not found. "
-                "Proceeding without verification (insecure for production)."
-            )
-        logger.info("TLS/SSL enabled for client without certificate verification")
-        logger.debug(f"Client SSL context configuration:")
-        logger.debug(f"  Certificate verification: DISABLED (accepting self-signed)")
-        logger.debug(f"  Hostname verification: DISABLED")
+        logger.warning(
+            "TLS certificate verification explicitly disabled; server identity is not authenticated"
+        )
+        logger.debug("Client SSL context configuration:")
+        logger.debug("  Certificate verification: DISABLED (accepting self-signed)")
+        logger.debug("  Hostname verification: DISABLED")
 
     # Configure SSL context for security
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-    logger.debug(f"  Minimum TLS version: TLS 1.2")
+    logger.debug("  Minimum TLS version: TLS 1.2")
 
     return ssl_context
 
@@ -273,7 +287,9 @@ def check_cert_expiration(cert_path: Optional[Path] = None) -> Optional[datetime
         return None
 
 
-def warn_if_cert_expiring_soon(cert_path: Optional[Path] = None, days_warning: int = 30) -> bool:
+def warn_if_cert_expiring_soon(
+    cert_path: Optional[Path] = None, days_warning: int = 30
+) -> bool:
     """Check if certificate is expiring soon and warn
 
     Args:

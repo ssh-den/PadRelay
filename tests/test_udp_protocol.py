@@ -1,93 +1,115 @@
+"""UDP v2 rejects forgery/replay and never answers unauthenticated datagrams."""
+
 import json
-from types import SimpleNamespace
+from unittest.mock import Mock
 
-import time
+import pytest
+
 from padrelay.protocol.udp import UDPServerProtocol
-from padrelay.security.auth import Authenticator
-from padrelay.protocol.constants import PROTOCOL_VERSION
+from padrelay.security.udp_session import UDPSession
+
+IP = "127.0.0.1"
+MESSAGE = {"type": "input", "protocol_version": "1.0", "buttons": [True], "axes": [0.5]}
 
 
-class DummyTransport:
-    def __init__(self):
-        self.sent = []
-
-    def get_extra_info(self, name):
-        if name == 'sockname':
-            return ('127.0.0.1', 0)
-        return None
-
-    def sendto(self, data, addr):
-        self.sent.append((json.loads(data.decode()), addr))
-
-    def close(self):
-        pass
+@pytest.fixture
+def channel():
+    server = UDPSession.create(IP)
+    client = UDPSession.from_parameters(server.parameters())
+    handler, transport = Mock(), Mock()
+    protocol = UDPServerProtocol(handler, {server.session_id: server})
+    protocol.connection_made(transport)
+    return server, client, protocol, handler, transport
 
 
-class DummyHandler:
-    def __init__(self):
-        self.received = []
-
-    def process(self, msg):
-        self.received.append(msg)
-
-
-def test_udp_heartbeat_and_input(monkeypatch):
-    auth = Authenticator('key')
-    handler = DummyHandler()
-    proto = UDPServerProtocol(handler, auth)
-    transport = DummyTransport()
-    proto.connection_made(transport)
-    addr = ('127.0.0.1', 1234)
-
-    monkeypatch.setattr(time, 'time', lambda: 1000)
-    token = auth.generate_udp_token()
-    heartbeat = {
-        'type': 'heartbeat',
-        'protocol_version': PROTOCOL_VERSION,
-        'auth_token': token,
-    }
-    proto.datagram_received(json.dumps(heartbeat).encode(), addr)
-    assert transport.sent[0][0]['type'] == 'heartbeat_ack'
-
-    input_msg = {
-        'type': 'input',
-        'protocol_version': PROTOCOL_VERSION,
-        'auth_token': token,
-        'buttons': [True],
-        'axes': [0.0, 0.0],
-    }
-    proto.datagram_received(json.dumps(input_msg).encode(), addr)
-    assert handler.received[0]['type'] == 'input'
+def test_encrypted_input_and_replay(channel):
+    _, client, protocol, handler, transport = channel
+    packet = client.encode(MESSAGE)
+    assert b"buttons" not in packet
+    protocol.datagram_received(packet, (IP, 1234))
+    handler.process.assert_called_once_with(MESSAGE)
+    protocol.datagram_received(packet, (IP, 5678))
+    handler.process.assert_called_once()
+    transport.sendto.assert_not_called()
 
 
-def test_udp_auth_params_request(monkeypatch):
-    hashed = Authenticator.hash_password('pw', iterations=120000)
-    server_auth = Authenticator(hashed)
-    handler = DummyHandler()
-    proto = UDPServerProtocol(handler, server_auth)
-    transport = DummyTransport()
-    proto.connection_made(transport)
-    addr = ('127.0.0.1', 5678)
+@pytest.mark.parametrize("offset", [0, 4, 20, 27, 28, -1])
+def test_tampering_cannot_advance_replay_state(channel, offset):
+    server, client, protocol, handler, _ = channel
+    packet = client.encode(MESSAGE)
+    forged = bytearray(packet)
+    forged[offset] ^= 0x80
+    protocol.datagram_received(bytes(forged), (IP, 1))
+    assert server.highest_received == -1
+    handler.process.assert_not_called()
+    protocol.datagram_received(packet, (IP, 1))
+    handler.process.assert_called_once_with(MESSAGE)
 
-    req = {
-        'type': 'auth_params_request',
-        'protocol_version': PROTOCOL_VERSION,
-    }
-    proto.datagram_received(json.dumps(req).encode(), addr)
-    resp = transport.sent[0][0]
-    assert resp['type'] == 'auth_params'
-    assert resp['salt'] == server_auth.salt
-    assert resp['iterations'] == server_auth.iterations
 
-    client_auth = Authenticator('pw')
-    client_auth.set_parameters(resp['salt'], resp['iterations'])
-    client_auth.password_plain = None
-    monkeypatch.setattr(time, 'time', lambda: 2000)
-    token = client_auth.generate_udp_token()
-    heartbeat = {
-        'type': 'heartbeat',
-        'protocol_version': PROTOCOL_VERSION,
-        'auth_token': token,
-    }
-    proto.datagram_received(json.dumps(heartbeat).encode(), addr)
-    assert transport.sent[1][0]['type'] == 'heartbeat_ack'
+def test_wrong_source_ip_and_unknown_or_retired_session(channel):
+    server, client, protocol, handler, _ = channel
+    packet = client.encode(MESSAGE)
+    protocol.datagram_received(packet, ("192.0.2.1", 1))
+    assert server.highest_received == -1
+    protocol.sessions.clear()
+    protocol.datagram_received(packet, (IP, 1))
+    handler.process.assert_not_called()
+
+
+def test_old_key_cannot_authenticate_new_session(channel):
+    _, client, protocol, handler, _ = channel
+    new = UDPSession.create(IP)
+    protocol.sessions = {new.session_id: new}
+    protocol.datagram_received(client.encode(MESSAGE), (IP, 1))
+    handler.process.assert_not_called()
+
+
+def test_legacy_tokens_and_parameter_requests_fail_closed(channel):
+    _, _, protocol, handler, transport = channel
+    for message in [
+        dict(MESSAGE, auth_token="captured-token"),
+        {"type": "auth_params_request"},
+    ]:
+        protocol.datagram_received(json.dumps(message).encode(), (IP, 1))
+    handler.process.assert_not_called()
+    transport.sendto.assert_not_called()
+
+
+def test_session_expiry(channel, monkeypatch):
+    server, client, protocol, handler, _ = channel
+    packet = client.encode(MESSAGE)
+    monkeypatch.setattr(
+        "padrelay.security.udp_session.time.monotonic", lambda: server.expires_at + 1
+    )
+    protocol.datagram_received(packet, (IP, 1))
+    handler.process.assert_not_called()
+    with pytest.raises(ValueError):
+        client.encode(MESSAGE)
+
+
+def test_nonce_exhaustion_never_wraps(channel):
+    server, client, _, _, _ = channel
+    client.send_sequence = client.MAX_SEQUENCE - 1
+    assert server.decode(client.encode(MESSAGE)) == MESSAGE
+    with pytest.raises(ValueError):
+        client.encode(MESSAGE)
+
+
+def test_reordered_old_state_cannot_override_newer_input(channel):
+    _, client, protocol, handler, _ = channel
+    older = client.encode(MESSAGE)
+    newer_message = dict(MESSAGE, buttons=[False])
+    newer = client.encode(newer_message)
+    protocol.datagram_received(newer, (IP, 1))
+    protocol.datagram_received(older, (IP, 1))
+    handler.process.assert_called_once_with(newer_message)
+
+
+def test_reordered_packets_have_bounded_duplicate_detection(channel):
+    server, client, _, _, _ = channel
+    packets = [client.encode(MESSAGE) for _ in range(70)]
+    assert server.decode(packets[69]) == MESSAGE
+    assert server.decode(packets[68]) == MESSAGE
+    assert server.decode(packets[68]) is None
+    assert server.decode(packets[0]) is None
+    assert server.received_bitmap.bit_length() <= 64

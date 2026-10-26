@@ -1,14 +1,10 @@
-"""
-Security-focused tests for PadRelay application
-These tests validate security mechanisms and potential vulnerabilities
-"""
+"""Password hashing, challenge-response, admission limits and input validation."""
+
 import pytest
-import hashlib
-import hmac
-import time
+
+from padrelay.protocol.messages import validate_input_message
 from padrelay.security.auth import Authenticator
 from padrelay.security.rate_limiting import ConnectionTracker
-from padrelay.protocol.messages import validate_input_message
 
 
 class TestPasswordSecurity:
@@ -29,7 +25,7 @@ class TestPasswordSecurity:
         assert auth1.password_hash != auth2.password_hash
 
     def test_password_hash_format(self):
-        """Verify password hash follows secure format"""
+        """Check the PBKDF2 algorithm, iteration count, salt and digest fields."""
         auth = Authenticator("test_password")
         hash_string = auth.get_hash_string()
 
@@ -41,16 +37,14 @@ class TestPasswordSecurity:
         assert len(parts[2]) == 32  # 16-byte salt in hex
         assert len(parts[3]) == 64  # SHA256 digest in hex
 
-    def test_timing_attack_resistance(self):
-        """Verify HMAC comparison uses constant-time comparison"""
+    def test_tcp_hmac_accepts_valid_response_and_rejects_invalid_response(self):
+        """Check response acceptance and rejection without making timing assertions."""
         auth = Authenticator("test_password")
         challenge = auth.generate_tcp_challenge()
 
         correct_response = auth.generate_tcp_response(challenge)
         wrong_response = "0" * 64  # Wrong response same length
 
-        # Both should execute in similar time (timing-safe comparison)
-        # This is a functional test - actual timing would need benchmarking
         assert auth.verify_tcp_response(challenge, correct_response) is True
         assert auth.verify_tcp_response(challenge, wrong_response) is False
 
@@ -71,7 +65,7 @@ class TestAuthenticationSecurity:
         # Each should be 32 characters (16 bytes hex-encoded)
         for challenge in challenges:
             assert len(challenge) == 32
-            assert all(c in '0123456789abcdef' for c in challenge)
+            assert all(c in "0123456789abcdef" for c in challenge)
 
     def test_tcp_response_requires_password_knowledge(self):
         """Verify TCP response cannot be forged without password"""
@@ -84,56 +78,12 @@ class TestAuthenticationSecurity:
         attacker_response = auth_attacker.generate_tcp_response(challenge)
         assert auth_server.verify_tcp_response(challenge, attacker_response) is False
 
-    def test_udp_token_time_window(self):
-        """Verify UDP tokens are time-limited"""
-        auth = Authenticator("test_password")
-
-        # Tokens from different time windows should differ
-        token_now = auth.generate_udp_token(current_time=1000000)
-        token_later = auth.generate_udp_token(current_time=1000000 + 120)  # 2 windows
-
-        assert token_now != token_later, "UDP tokens should change over time"
-
-    def test_udp_token_accepts_previous_window(self):
-        """Verify UDP allows one previous time window (clock skew tolerance)"""
-        auth = Authenticator("test_password")
-
-        base_time = 1000000
-
-        # Generate token for current window
-        current_token = auth.generate_udp_token(current_time=base_time)
-
-        # Generate token for previous window
-        prev_token = auth.generate_udp_token(current_time=base_time - 60)
-
-        # Both should be accepted within the 2-window validity
-        message_current = {"auth_token": current_token}
-        message_prev = {"auth_token": prev_token}
-
-        assert auth.authenticate_udp(message_current, current_time=base_time) is True
-        assert auth.authenticate_udp(message_prev, current_time=base_time) is True
-
-    def test_udp_token_rejects_old_tokens(self):
-        """Verify UDP rejects tokens older than 2 windows"""
-        auth = Authenticator("test_password")
-
-        base_time = 1000000
-
-        # Generate token from 3 windows ago
-        old_token = auth.generate_udp_token(current_time=base_time - 180)
-
-        message = {"auth_token": old_token}
-
-        # Should be rejected
-        assert auth.authenticate_udp(message, current_time=base_time) is False
-
     def test_authentication_without_password(self):
         """Verify behavior when no password is set"""
         auth = Authenticator(None)
 
-        # Should allow all when no password
+        # TCP authentication is optional when no password is configured.
         assert auth.verify_tcp_response("challenge", "any_response") is True
-        assert auth.generate_udp_token() is None
 
 
 class TestRateLimitingSecurity:
@@ -144,14 +94,14 @@ class TestRateLimitingSecurity:
         tracker = ConnectionTracker(
             max_connections=1,
             rate_limit_window=10,  # 10 second window
-            max_requests=5,        # Only 5 requests
-            block_duration=2       # Block for 2 seconds
+            max_requests=5,  # Only 5 requests
+            block_duration=2,  # Block for 2 seconds
         )
 
         client_addr = ("192.168.1.100", 12345)
 
         # First 5 requests should be allowed
-        for i in range(5):
+        for _i in range(5):
             assert tracker.is_rate_limited(client_addr) is False
 
         # 6th request should be rate limited
@@ -160,16 +110,13 @@ class TestRateLimitingSecurity:
     def test_blocked_clients_tracked(self):
         """Verify blocked clients are properly tracked"""
         tracker = ConnectionTracker(
-            max_connections=1,
-            rate_limit_window=10,
-            max_requests=3,
-            block_duration=2
+            max_connections=1, rate_limit_window=10, max_requests=3, block_duration=2
         )
 
         client_addr = ("192.168.1.100", 12345)
 
         # Trigger rate limit
-        for i in range(4):
+        for _i in range(4):
             tracker.is_rate_limited(client_addr)
 
         # Client should be blocked
@@ -192,17 +139,14 @@ class TestRateLimitingSecurity:
     def test_per_client_rate_limiting(self):
         """Verify rate limiting is per-client, not global"""
         tracker = ConnectionTracker(
-            max_connections=2,
-            rate_limit_window=10,
-            max_requests=3,
-            block_duration=2
+            max_connections=2, rate_limit_window=10, max_requests=3, block_duration=2
         )
 
         client1 = ("192.168.1.100", 12345)
         client2 = ("192.168.1.101", 12346)
 
         # Client1 makes requests
-        for i in range(3):
+        for _i in range(3):
             tracker.is_rate_limited(client1)
 
         # Client2 should not be affected by client1's rate limit
@@ -214,88 +158,121 @@ class TestInputValidationSecurity:
 
     def test_input_validation_rejects_invalid_type(self):
         """Verify input validation rejects wrong message types"""
-        message = {
-            "type": "not_input",
-            "buttons": [],
-            "axes": []
-        }
+        message = {"type": "not_input", "buttons": [], "axes": []}
         assert validate_input_message(message) is False
 
     def test_input_validation_rejects_invalid_buttons(self):
         """Verify button validation rejects non-boolean values"""
         # Non-list buttons
-        assert validate_input_message({
-            "type": "input",
-            "buttons": "not_a_list",
-            "axes": []
-        }) is False
+        assert (
+            validate_input_message(
+                {"type": "input", "buttons": "not_a_list", "axes": []}
+            )
+            is False
+        )
 
         # Non-boolean button values
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [True, 1, False],  # 1 is not bool
-            "axes": []
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [True, 1, False],  # 1 is not bool
+                    "axes": [],
+                }
+            )
+            is False
+        )
 
     def test_input_validation_rejects_out_of_range_axes(self):
         """Verify axis validation enforces [-1.0, 1.0] range"""
         # Axis value too high
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [0.5, 1.5]  # 1.5 out of range
-        }) is False
+        assert (
+            validate_input_message(
+                {"type": "input", "buttons": [], "axes": [0.5, 1.5]}  # 1.5 out of range
+            )
+            is False
+        )
 
         # Axis value too low
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [-2.0, 0.0]  # -2.0 out of range
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [-2.0, 0.0],  # -2.0 out of range
+                }
+            )
+            is False
+        )
 
     def test_input_validation_rejects_invalid_triggers(self):
         """Verify trigger validation enforces [0.0, 1.0] range"""
         # Negative trigger value
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [],
-            "triggers": [-0.1, 0.5]  # Negative not allowed
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [],
+                    "triggers": [-0.1, 0.5],  # Negative not allowed
+                }
+            )
+            is False
+        )
 
         # Trigger value too high
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [],
-            "triggers": [0.5, 1.5]  # 1.5 out of range
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [],
+                    "triggers": [0.5, 1.5],  # 1.5 out of range
+                }
+            )
+            is False
+        )
 
     def test_input_validation_rejects_invalid_hats(self):
         """Verify hat validation enforces valid values (-1, 0, 1)"""
         # Invalid hat x value
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [],
-            "hats": [(2, 0)]  # 2 is invalid
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [],
+                    "hats": [(2, 0)],  # 2 is invalid
+                }
+            )
+            is False
+        )
 
         # Invalid hat y value
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [],
-            "hats": [(0, -2)]  # -2 is invalid
-        }) is False
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [],
+                    "hats": [(0, -2)],  # -2 is invalid
+                }
+            )
+            is False
+        )
 
-        # Non-tuple hat
-        assert validate_input_message({
-            "type": "input",
-            "buttons": [],
-            "axes": [],
-            "hats": [[0, 0]]  # List instead of tuple
-        }) is False
+        # Hat pairs must have exactly two coordinates.
+        assert (
+            validate_input_message(
+                {
+                    "type": "input",
+                    "buttons": [],
+                    "axes": [],
+                    "hats": [[0]],
+                }
+            )
+            is False
+        )
 
     def test_input_validation_accepts_valid_message(self):
         """Verify valid input messages pass validation"""
@@ -304,7 +281,7 @@ class TestInputValidationSecurity:
             "buttons": [True, False, True],
             "axes": [0.5, -0.3, 0.0, 1.0],
             "triggers": [0.8, 0.2],
-            "hats": [(0, 1), (-1, 0)]
+            "hats": [(0, 1), (-1, 0)],
         }
         assert validate_input_message(message) is True
 
@@ -315,11 +292,12 @@ class TestProtocolVersionSecurity:
     def test_protocol_version_constant_defined(self):
         """Verify protocol version is defined"""
         from padrelay.protocol.constants import PROTOCOL_VERSION
+
         assert PROTOCOL_VERSION == "1.0"
 
     def test_message_includes_protocol_version(self):
         """Verify all messages include protocol version"""
-        from padrelay.protocol.messages import InputMessage, HeartbeatMessage
+        from padrelay.protocol.messages import HeartbeatMessage, InputMessage
 
         msg = InputMessage()
         assert "protocol_version" in msg.data
@@ -366,7 +344,7 @@ class TestCryptographicPrimitives:
 
         # SHA256 HMAC should produce 64 hex characters
         assert len(response) == 64
-        assert all(c in '0123456789abcdef' for c in response)
+        assert all(c in "0123456789abcdef" for c in response)
 
     def test_pbkdf2_uses_sha256(self):
         """Verify PBKDF2 uses SHA256 as PRF"""

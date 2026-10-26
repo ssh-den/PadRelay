@@ -1,10 +1,9 @@
-import inspect
-
+from padrelay.client import client_app
+from padrelay.client import input as client_input
 from padrelay.core import config
-from padrelay.client import client_app, input as client_input
-from padrelay.protocol import tcp, udp, messages
+from padrelay.protocol import tcp, udp
 from padrelay.security import auth, rate_limiting
-from padrelay.server import server_app, input_processor, virtual_gamepad
+from padrelay.server import input_processor, server_app, virtual_gamepad
 
 
 def test_functions_exist():

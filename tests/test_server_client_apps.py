@@ -1,10 +1,11 @@
 import asyncio
 import contextlib
+
 import pytest
 
-from padrelay.server import server_app
 from padrelay.client import client_app
 from padrelay.protocol.tcp import TCPProtocolHandler
+from padrelay.server import server_app
 
 
 class DummyGamepadInput:
@@ -38,9 +39,13 @@ class DummyVirtualGamepad:
 class DummyGamepadHandler:
     def __init__(self, *a, **k):
         self.received = []
+        self.gamepad = a[0]
 
     def process(self, msg):
         self.received.append(msg)
+
+    def reset(self):
+        self.gamepad.reset_gamepad_state()
 
 
 @pytest.mark.asyncio
@@ -95,11 +100,9 @@ async def test_tcp_auth_failure(monkeypatch):
     handler = TCPProtocolHandler(reader, writer)
     challenge = await handler.read_message()
     assert challenge["type"] == "auth_challenge"
-    await handler.send_message({
-        "type": "auth_response",
-        "protocol_version": "1.0",
-        "response": "bad"
-    })
+    await handler.send_message(
+        {"type": "auth_response", "protocol_version": "1.0", "response": "bad"}
+    )
     await handler.drain()
     result = await handler.read_message()
     assert result["type"] == "auth_failed"
@@ -116,18 +119,18 @@ async def test_tcp_auth_failure(monkeypatch):
 async def test_client_auth_version_mismatch(monkeypatch):
     async def fake_server(reader, writer):
         handler = TCPProtocolHandler(reader, writer)
-        await handler.send_message({
-            "type": "auth_challenge",
-            "protocol_version": "0.9",
-            "challenge": "x"
-        })
+        await handler.send_message(
+            {"type": "auth_challenge", "protocol_version": "0.9", "challenge": "x"}
+        )
         await handler.drain()
         await handler.read_message()
         writer.close()
 
     srv = await asyncio.start_server(fake_server, "127.0.0.1", 0)
     host, port = srv.sockets[0].getsockname()
-    client = client_app.VirtualGamepadClient(host, port, "tcp", DummyGamepadInput(), password="pw")
+    client = client_app.VirtualGamepadClient(
+        host, port, "tcp", DummyGamepadInput(), password="pw"
+    )
 
     reader, writer = await asyncio.open_connection(host, port)
     handler = TCPProtocolHandler(reader, writer)
@@ -149,7 +152,9 @@ async def test_client_heartbeat_timeout(monkeypatch):
 
     srv = await asyncio.start_server(fake_server, "127.0.0.1", 0)
     host, port = srv.sockets[0].getsockname()
-    client = client_app.VirtualGamepadClient(host, port, "tcp", DummyGamepadInput(), password="pw")
+    client = client_app.VirtualGamepadClient(
+        host, port, "tcp", DummyGamepadInput(), password="pw"
+    )
 
     reader, writer = await asyncio.open_connection(host, port)
     handler = TCPProtocolHandler(reader, writer)
@@ -159,6 +164,7 @@ async def test_client_heartbeat_timeout(monkeypatch):
     await writer.wait_closed()
     srv.close()
     await srv.wait_closed()
+
 
 @pytest.mark.asyncio
 async def test_run_tcp_server_port_in_use(monkeypatch):
