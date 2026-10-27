@@ -1,92 +1,121 @@
 # PadRelay
 
-Forward physical gamepad input to a virtual Xbox 360 or DualShock 4 controller
-on a Windows PC. The client reads input with pygame; the server uses vgamepad
-and ViGEmBus. Requires **Python 3.11+**.
+Use a gamepad connected to one computer to play on another Windows PC.
+PadRelay sends your button presses and stick movements over the network and
+creates a virtual Xbox 360 or DualShock 4 controller on the receiving PC.
 
-| Mode | Input | Control and login | Firewall |
-| --- | --- | --- | --- |
-| TCP (default) | Ordered JSON stream over TLS | Same TLS stream | TCP port |
-| UDP v2 | AES-256-GCM datagrams with replay checks | Verified TLS on the same port number | TCP and UDP port |
+```text
+Gamepad → Client computer → Network → Windows PC → Game
+```
 
-One server process owns one virtual gamepad and admits one pending or
-authenticated client. UDP still requires a password and server certificate
-trust; legacy bearer tokens and unauthenticated UDP are rejected.
-See the [3.0.0 migration notes](CHANGELOG.md#300---2026-10-26) before upgrading older peers.
+## What you need
+
+- **Client:** a Windows, Linux or macOS computer with a gamepad supported by pygame.
+- **Server:** the Windows PC running your game, with the ViGEmBus driver installed.
+- **Both computers:** Python 3.11 or newer and compatible PadRelay versions.
+
+Each server process supports one connected client and one virtual controller.
 
 ## Install
 
-In an activated Python environment:
+In an activated Python virtual environment, install PadRelay on the client:
 
 ```sh
 python -m pip install padrelay
 ```
 
-On the Windows server, install the server extra and the ViGEmBus driver:
+On the Windows server:
 
 ```sh
 python -m pip install "padrelay[server]"
 ```
 
-See the [installation guide](https://ssh-den.github.io/PadRelay/installation.html)
-for source installs, drivers and environment checks. Current repository behavior
-may differ from an older published package; use compatible builds on both peers.
+The server also needs the ViGEmBus driver. Follow the
+[installation guide](docs/installation.rst) for driver and source installation.
+These instructions describe the current repository; an older published package
+may behave differently.
 
-## First Connection
+## Connect
 
-1. Follow the [quick start](https://ssh-den.github.io/PadRelay/quickstart.html)
-   with separate server and client INI files. For remote clients, bind the server
-   to its LAN address or `0.0.0.0`; the built-in default is local-only.
-2. Start the server. Copy its public `server.crt` to the client through a trusted
-   channel; keep `server.key` on the server.
-3. Set the client's `ca_path` to that trusted copy. With the generated localhost
-   certificate reached through a LAN IP, set `server_hostname = localhost`.
-4. Run `padrelay-client --config client.ini` and check the virtual device in
-   Windows `joy.cpl`.
+This example connects two computers on the same local network using TCP with TLS.
 
-The server's default identity lives in `~/.padrelay/certs/`. Both peers use the
-same password, or the client uses the server's exact encoded hash. Credential
-precedence and INI migration are in the [configuration reference](docs/configuration.rst).
+### 1. Start the server
 
-For UDP, change both peers to `protocol = udp`, allow both port protocols and
-set a suitable server packet budget, normally `max_requests = 6000` at 60 Hz.
-An explicit TCP value of 100 in a copied INI is not replaced automatically.
-Sessions reconnect after ten minutes with a new key. TLS cannot be disabled
-for UDP, even over a VPN.
+Create `server.ini` on the Windows PC. Replace the password with your own:
 
-## Documentation
+```ini
+[server]
+host = 0.0.0.0
+port = 9999
+protocol = tcp
+password = replace-with-your-password
 
-- [Client and server setup](https://ssh-den.github.io/PadRelay/quickstart.html)
-- [Certificate trust and renewal](docs/user_guide/tls_setup.rst)
-- [Controller mapping](docs/user_guide/key_mapper.rst)
-- [Troubleshooting](docs/user_guide/troubleshooting.rst)
-- [Security boundaries](docs/security.rst) and [wire protocol](docs/protocol.rst)
-- [Development](docs/development.rst) and [contributing](docs/contributing.rst)
-
-SDL-recognized controllers map automatically. For custom bindings or calibration,
-run `padrelay-keymapper --joystick-index 0 --output controller_profile.json`, then
-select it with `padrelay-client --controller-profile controller_profile.json`.
-Profiles belong on the client. Protocol 2.0 requires updating both peers;
-legacy server mapping/calibration sections are rejected. D-pad hats and DS4 PS
-are handled through the canonical state and output adapter.
-
-Logs default to `~/.padrelay/logs/padrelay.log`. Set `PADRELAY_DEBUG=1` for
-diagnostics or `PADRELAY_LOG_DIR` to change the directory. The CLI has no
-`--version` flag; use `python -m pip show padrelay`.
-
-## Development
-
-From an activated `.venv` in a checkout:
-
-```sh
-python -m pip install -e ".[dev]"
+[vgamepad]
+type = xbox360
 ```
 
-The [development guide](docs/development.rst) lists the checks and documentation
-build commands. **Run Tests** checks Python 3.11 when started manually
-through **Run workflow** or after a maintainer approves the current PR commit.
-Pushes and opening a PR do not trigger tests. Documentation and package publishing
-are manual workflows.
+Allow incoming TCP connections on port 9999 in Windows Firewall for your local
+network, then run:
 
-PadRelay is licensed under the [MIT License](LICENSE). Report vulnerabilities
-privately through the [contribution guide](docs/contributing.rst).
+```sh
+padrelay-server --config server.ini
+```
+
+The server creates `server.crt` and `server.key` in
+`%USERPROFILE%\.padrelay\certs\`. Copy `server.crt` to the client through a
+trusted channel. Keep `server.key` on the server.
+
+### 2. Start the client
+
+Connect your gamepad. Create `client.ini` with the Windows PC's local IP address,
+the same password and the path to your certificate copy:
+
+```ini
+[network]
+server_ip = 192.168.1.100
+server_port = 9999
+protocol = tcp
+password = replace-with-your-password
+
+[joystick]
+index = 0
+
+[security]
+ca_path = /path/to/server.crt
+server_hostname = localhost
+```
+
+Keep `server_hostname = localhost` when using the generated certificate: this
+is the name on the certificate. The connection goes to `server_ip`.
+
+```sh
+padrelay-client --config client.ini
+```
+
+### 3. Check the controller
+
+On the Windows PC, open `joy.cpl`, select the virtual controller and open its
+properties. Press buttons and move the sticks to check that input arrives.
+You can now use the virtual controller in your game. Stop either process with
+`Ctrl+C`.
+
+## More help
+
+- [Controller mapping](docs/user_guide/key_mapper.rst) — fix button layouts or calibrate input.
+- [Troubleshooting](docs/user_guide/troubleshooting.rst) — connection and controller problems.
+- [Configuration](docs/configuration.rst) — settings and defaults.
+- [Certificate setup](docs/user_guide/tls_setup.rst) — custom certificates and renewal.
+- [UDP setup](docs/quickstart.rst#switch-to-udp-v2) — an alternative to TCP that needs both TCP and UDP ports open.
+- [Upgrade notes](CHANGELOG.md) — changes and migration steps; update both computers when upgrading from older protocols.
+- [Full documentation](https://ssh-den.github.io/PadRelay/) — all guides and technical references.
+
+## Contributing
+
+Bug reports, fixes, documentation and controller mappings are welcome.
+Read the [contribution guide](docs/contributing.rst) and
+[development guide](docs/development.rst) to get started.
+Report security vulnerabilities privately to [sshden@duck.com](mailto:sshden@duck.com).
+
+## License
+
+PadRelay is available under the [MIT License](LICENSE).
